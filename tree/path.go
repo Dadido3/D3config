@@ -6,35 +6,18 @@
 package tree
 
 import (
-	"regexp"
 	"strings"
 )
 
-// Separator delimits single path elements
-const Separator = "."
+// PathSeparator delimits single path elements.
+const PathSeparator = "."
 
-var regexRemove = regexp.MustCompile(`^\.+|\.+$|\r|\n`)
-var regexReplacePeriods = regexp.MustCompile(`\.{2,}`)
-
-// Path is used to locate any element in a tree
-//
-// A period is used to delimit single elements.
-type Path string
-
-// NewPath creates a new path from strings or other Path objects
-func NewPath(elem ...Path) Path {
-	str := make([]string, len(elem))
-	for i, v := range elem {
-		str[i] = string(v) // TODO: Convert elem to interface and add typeswitch with casting
-	}
-
-	return Path(strings.Join(str, Separator)).Clean()
+// PathJoin creates a new path from several path strings.
+func PathJoin(elem ...string) string {
+	return strings.Join(elem, PathSeparator)
 }
 
-// Clean removes any empty or invalid elements from a path
-func (p Path) Clean() Path {
-	str := string(p)
-	str = regexRemove.ReplaceAllString(str, "")
-	str = regexReplacePeriods.ReplaceAllString(str, Separator)
-	return Path(str)
+// PathSplit splits a path into its elements.
+func PathSplit(path string) []string {
+	return strings.Split(path, PathSeparator)
 }
