@@ -6,6 +6,7 @@
 package tree
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -95,6 +96,30 @@ func TestNode_Compare(t *testing.T) {
 			}
 			if !cmp.Equal(gotRemoved, tt.wantRemoved, sortOption, cmpopts.EquateEmpty()) {
 				t.Errorf("Node.Compare() gotRemoved = %v, want %v", gotRemoved, tt.wantRemoved)
+			}
+		})
+	}
+}
+
+func TestNode_CreatePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		n        Node
+		path     string
+		want     Node
+		wantThis Node
+	}{
+		{"A", Node{}, "test.123.foo.bar", Node{}, Node{"test": Node{"123": Node{"foo": Node{"bar": Node{}}}}}},
+		{"B", Node{"foo": Node{"value": "string", "bar": 1234}}, "foo.bar.baz", Node{}, Node{"foo": Node{"value": "string", "bar": Node{"baz": Node{}}}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.n.CreatePath(tt.path)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Node.CreatePath() = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(tt.n, tt.wantThis) {
+				t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
 			}
 		})
 	}

@@ -15,8 +15,36 @@ import (
 // - int64
 // - float64
 //
-// Valid child names must not contain periods. (PathSeparators)
+// Valid child names must not contain periods (PathSeparator).
 type Node map[string]interface{}
+
+// CreatePath makes sure that a given path exists by creating nodes and overwriting existing values.
+//
+// The function will return the node the path points to.
+func (n Node) CreatePath(path string) Node {
+	elements := PathSplit(path)
+
+	node := n
+	for _, e := range elements {
+		child, ok := node[e]
+		if !ok {
+			// Create child if it doesn't exist
+			tempNode := Node{}
+			node[e] = tempNode
+			node = tempNode
+		} else {
+			tempNode, ok := child.(Node)
+			if !ok {
+				// Child is not a node, so overwrite it
+				tempNode = Node{}
+				node[e] = tempNode
+			}
+			node = tempNode
+		}
+	}
+
+	return node
+}
 
 // GetOrError returns a node or value at the given path, or an error.
 func (n Node) GetOrError(path string) (interface{}, error) {
