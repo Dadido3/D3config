@@ -46,6 +46,57 @@ func (n Node) CreatePath(path string) Node {
 	return node
 }
 
+// Set creates all needed nodes and sets the element at the given path.
+func (n Node) Set(path string, element interface{}) error {
+	var newElement interface{}
+
+	switch v := element.(type) {
+	case Node:
+		newElement = v
+	case bool:
+		newElement = v
+	case string:
+		newElement = v
+	case int:
+		newElement = int64(v)
+	case int8:
+		newElement = int64(v)
+	case int16:
+		newElement = int64(v)
+	case int32:
+		newElement = int64(v)
+	case int64:
+		newElement = int64(v)
+	case uint:
+		newElement = int64(v)
+	case uint8:
+		newElement = int64(v)
+	case uint16:
+		newElement = int64(v)
+	case uint32:
+		newElement = int64(v)
+	case uint64:
+		newElement = v
+	case float32:
+		newElement = float64(v)
+	case float64:
+		newElement = v
+	// TODO: Handle any structure, and split it into its base types
+	default:
+		return ErrUnexpectedType{"", fmt.Sprintf("%T", v), ""}
+	}
+
+	pathElements := PathSplit(path)
+	lastElement := pathElements[len(pathElements)-1]
+	node := n
+	if len(pathElements) > 1 {
+		node = n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
+	}
+	node[lastElement] = newElement
+
+	return nil
+}
+
 // GetOrError returns a node or value at the given path, or an error.
 func (n Node) GetOrError(path string) (interface{}, error) {
 	elements := PathSplit(path)

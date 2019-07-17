@@ -124,3 +124,34 @@ func TestNode_CreatePath(t *testing.T) {
 		})
 	}
 }
+
+type somethingInvalid string
+
+func TestNode_Set(t *testing.T) {
+	type args struct {
+		path    string
+		element interface{}
+	}
+	tests := []struct {
+		name     string
+		n        Node
+		args     args
+		wantErr  bool
+		wantThis Node
+	}{
+		{"A", Node{}, args{"foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
+		{"B", Node{}.CreatePath("foo.bar.baz"), args{"foo.bar", 123}, false, Node{"foo": Node{"bar": int64(123)}}},
+		{"C", Node{}, args{"foo.bar", somethingInvalid("test")}, true, Node{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.n.Set(tt.args.path, tt.args.element)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Node.Set() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.n, tt.wantThis) {
+				t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
+			}
+		})
+	}
+}

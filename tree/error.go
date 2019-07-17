@@ -34,5 +34,11 @@ type ErrUnexpectedType struct {
 }
 
 func (e ErrUnexpectedType) Error() string {
-	return fmt.Sprintf("Element at %v is of type %v instead of %v", e.path, e.got, e.expected)
+	if e.path != "" {
+		return fmt.Sprintf("Element at %v is of type %v instead of %v", e.path, e.got, e.expected)
+	}
+	if e.expected != "" {
+		return fmt.Sprintf("Element is of type %v instead of %v", e.got, e.expected)
+	}
+	return fmt.Sprintf("Element is of unexpected type %v", e.got)
 }
