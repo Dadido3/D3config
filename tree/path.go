@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+// TODO: Fix paths: The element itself should be "". And an empty named child element should be "."
+
 package tree
 
 import (

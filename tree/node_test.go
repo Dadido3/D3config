@@ -17,13 +17,13 @@ var treeEmpty = Node{}
 
 var treeA = Node{
 	"someString": "someString",
-	"someNumber": 123,
+	"someNumber": Number("123"),
 	"subnode": Node{
 		"a": Node{
 			"foo": "bar",
 		},
 		"b": Node{
-			"someFloat": 123.456,
+			"someFloat": Number("123.456"),
 		},
 		"c": Node{
 			"sub": Node{
@@ -35,12 +35,20 @@ var treeA = Node{
 				"val": "string",
 			},
 		},
+		"f": []Node{
+			Node{"sub": Node{}},
+			Node{"val": true},
+		},
+		"g": []Node{
+			Node{"sub": Node{"val": false}},
+			Node{"val": true},
+		},
 	},
 }
 
 var treeB = Node{
 	"someString": "someStringEdited",
-	"someNumber": 123,
+	"someNumber": Number("123"),
 	"subnode": Node{
 		"a": Node{
 			"foo": Node{
@@ -48,13 +56,55 @@ var treeB = Node{
 			},
 		},
 		"b": Node{
-			"someFloat": 123.4567,
+			"someFloat": Number("123.4567"),
 		},
 		"c": "NothingToSeeHere",
 		"d": Node{
 			"sub": Node{
 				"sub": Node{},
 			},
+		},
+		"f": []Node{
+			Node{"sub": Node{"val": false}},
+			Node{"val": true},
+		},
+		"g": []Node{
+			Node{"sub": Node{"val": false}},
+			Node{"val": true},
+		},
+	},
+}
+
+var treeAB = Node{
+	"someString": "someStringEdited",
+	"someNumber": Number("123"),
+	"subnode": Node{
+		"a": Node{
+			"foo": Node{
+				"sub": Node{},
+			},
+		},
+		"b": Node{
+			"someFloat": Number("123.4567"),
+		},
+		"c": "NothingToSeeHere",
+		"d": Node{
+			"sub": Node{
+				"sub": Node{},
+			},
+		},
+		"e": Node{
+			"sub": Node{
+				"val": "string",
+			},
+		},
+		"f": []Node{
+			Node{"sub": Node{"val": false}},
+			Node{"val": true},
+		},
+		"g": []Node{
+			Node{"sub": Node{"val": false}},
+			Node{"val": true},
 		},
 	},
 }
@@ -69,18 +119,18 @@ func TestNode_Compare(t *testing.T) {
 		wantRemoved  []string
 	}{
 		{"A -> B", treeA, treeB,
-			[]string{"someString", "subnode.a.foo", "subnode.b.someFloat", "subnode.c"},
+			[]string{"someString", "subnode.a.foo", "subnode.b.someFloat", "subnode.c", "subnode.f"},
 			[]string{"subnode.a.foo.sub", "subnode.d", "subnode.d.sub", "subnode.d.sub.sub"},
 			[]string{"subnode.c.sub", "subnode.c.sub.sub", "subnode.e", "subnode.e.sub", "subnode.e.sub.val"},
 		},
 		{"A -> 0", treeA, treeEmpty,
 			[]string{},
 			[]string{},
-			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val"},
+			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val", "subnode.f", "subnode.g"},
 		},
 		{"0 -> A", treeEmpty, treeA,
 			[]string{},
-			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val"},
+			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val", "subnode.f", "subnode.g"},
 			[]string{},
 		},
 	}
@@ -110,7 +160,7 @@ func TestNode_CreatePath(t *testing.T) {
 		wantThis Node
 	}{
 		{"A", Node{}, "test.123.foo.bar", Node{}, Node{"test": Node{"123": Node{"foo": Node{"bar": Node{}}}}}},
-		{"B", Node{"foo": Node{"value": "string", "bar": 1234}}, "foo.bar.baz", Node{}, Node{"foo": Node{"value": "string", "bar": Node{"baz": Node{}}}}},
+		{"B", Node{"foo": Node{"value": "string", "bar": Number("1234")}}, "foo.bar.baz", Node{}, Node{"foo": Node{"value": "string", "bar": Node{"baz": Node{}}}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,6 +170,12 @@ func TestNode_CreatePath(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.n, tt.wantThis) {
 				t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
+			}
+			if err := got.Check(); err != nil {
+				t.Errorf("Illegal element in tree: %v", err)
+			}
+			if err := tt.n.Check(); err != nil {
+				t.Errorf("Illegal element in tree: %v", err)
 			}
 		})
 	}
@@ -140,7 +196,7 @@ func TestNode_Set(t *testing.T) {
 		wantThis Node
 	}{
 		{"A", Node{}, args{"foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
-		{"B", Node{}.CreatePath("foo.bar.baz"), args{"foo.bar", 123}, false, Node{"foo": Node{"bar": int64(123)}}},
+		{"B", Node{}.CreatePath("foo.bar.baz"), args{"foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
 		{"C", Node{}, args{"foo.bar", somethingInvalid("test")}, true, Node{}},
 	}
 	for _, tt := range tests {
@@ -151,6 +207,33 @@ func TestNode_Set(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.n, tt.wantThis) {
 				t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
+			}
+			if err := tt.n.Check(); err != nil {
+				t.Errorf("Illegal element in tree: %v", err)
+			}
+		})
+	}
+}
+
+func TestNode_Merge(t *testing.T) {
+	tests := []struct {
+		name     string
+		n        Node
+		new      Node
+		wantThis Node
+	}{
+		{"A", treeA, treeB, treeAB},
+		{"B", treeEmpty, treeA, treeA},
+		{"C", treeA, treeEmpty, treeA},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.n.Merge(tt.new)
+			if !reflect.DeepEqual(tt.n, tt.wantThis) {
+				t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
+			}
+			if err := tt.n.Check(); err != nil {
+				t.Errorf("Illegal element in tree: %v", err)
 			}
 		})
 	}

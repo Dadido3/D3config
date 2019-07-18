@@ -1,4 +1,4 @@
-module github.com/Dadido3/configstorage
+module github.com/Dadido3/configdb
 
 go 1.12
 
