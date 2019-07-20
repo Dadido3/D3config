@@ -7,11 +7,12 @@ package tree
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-// Node contains children that are either nodes, arrays, or values of the following types:
+// Node contains children that are either nodes, slices, or values of the following types:
 // - bool
 // - string
 // - number
@@ -48,23 +49,12 @@ func (n Node) CreatePath(path string) Node {
 }
 
 // Set creates all needed nodes and sets the element at the given path.
-func (n Node) Set(path string, element interface{}) error {
+func (n Node) Set(path string, obj interface{}) error {
 	var newElement interface{}
 
-	switch v := element.(type) {
-	case Node, bool, string:
-		newElement = v
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-		result, err := NumberCreate(v)
-		if err != nil {
-			return err
-		}
-		newElement = result
-	case []Node, []bool, []string, []Number: // TODO: Add more array types (Special case: []byte). Also array of arrays
-		newElement = v
-	// TODO: Handle any structure, and split it into its base types/arrays/nodes
-	default:
-		return ErrUnexpectedType{"", fmt.Sprintf("%T", v), ""}
+	newElement, err := anyToTree(reflect.ValueOf(obj))
+	if err != nil {
+		return err
 	}
 
 	pathElements := PathSplit(path)
@@ -78,8 +68,8 @@ func (n Node) Set(path string, element interface{}) error {
 	return nil
 }
 
-// GetOrError returns a node or value at the given path, or an error.
-func (n Node) GetOrError(path string) (interface{}, error) {
+// Get reads the element at the path, and writes it into the given object obj.
+func (n Node) Get(path string, obj interface{}) error {
 	elements := PathSplit(path)
 
 	inter := interface{}(n)
@@ -87,129 +77,56 @@ func (n Node) GetOrError(path string) (interface{}, error) {
 		var ok bool
 		node, ok := inter.(Node)
 		if !ok {
-			return nil, ErrPathInsideValue{path} // Path points inside a value
+			return &ErrPathInsideValue{path} // Path points inside a value
 		}
 		inter, ok = node[e]
 		if !ok {
-			return nil, ErrElementNotFound{path} // Element at path doesn't exist
+			return &ErrElementNotFound{path} // Element at path doesn't exist
 		}
 	}
 
-	return inter, nil
-}
-
-// Get returns a node or value at the given path, or nil if it can't be found.
-func (n Node) Get(path string) interface{} {
-	result, err := n.GetOrError(path)
-	if err != nil {
-		return nil
-	}
-
-	return result
-}
-
-// TODO: Add GetStruct method
-// TODO: Add GetArray* methods
-
-// GetBoolOrError returns the bool at the given path, or an error if it doesn't exist.
-func (n Node) GetBoolOrError(path string) (bool, error) {
-	inter, err := n.GetOrError(path)
-	if err != nil {
-		return false, err
-	}
-	if v, ok := inter.(bool); ok {
-		return v, nil
-	}
-
-	return false, ErrUnexpectedType{path, fmt.Sprintf("%T", inter), "bool"}
+	return treeToAny(inter, reflect.ValueOf(obj))
 }
 
 // GetBool returns the bool at the given path.
 // In case of an error, the fallback is returned.
-func (n Node) GetBool(path string, fallback bool) bool {
-	result, err := n.GetBoolOrError(path)
-	if err != nil {
-		return fallback
+func (n Node) GetBool(path string, fallback bool) (result bool) {
+	if err := n.Get(path, &result); err != nil {
+		result = fallback
 	}
-
-	return result
-}
-
-// GetStringOrError returns the string at the given path, or an error if it doesn't exist.
-func (n Node) GetStringOrError(path string) (string, error) {
-	inter, err := n.GetOrError(path)
-	if err != nil {
-		return "", err
-	}
-	if v, ok := inter.(string); ok {
-		return v, nil
-	}
-
-	return "", ErrUnexpectedType{path, fmt.Sprintf("%T", inter), "string"}
+	return
 }
 
 // GetString returns the string at the given path.
 // In case of an error, the fallback is returned.
-func (n Node) GetString(path string, fallback string) string {
-	result, err := n.GetStringOrError(path)
-	if err != nil {
-		return fallback
+func (n Node) GetString(path string, fallback string) (result string) {
+	if err := n.Get(path, &result); err != nil {
+		result = fallback
 	}
-
-	return result
-}
-
-// GetInt64OrError returns the integer at the given path, or an error if it doesn't exist.
-func (n Node) GetInt64OrError(path string) (int64, error) {
-	inter, err := n.GetOrError(path)
-	if err != nil {
-		return 0, err
-	}
-	if v, ok := inter.(Number); ok {
-		return v.Int64()
-	}
-
-	return 0, ErrUnexpectedType{path, fmt.Sprintf("%T", inter), "number"}
+	return
 }
 
 // GetInt64 returns the integer at the given path.
 // In case of an error, the fallback is returned.
-func (n Node) GetInt64(path string, fallback int64) int64 {
-	result, err := n.GetInt64OrError(path)
-	if err != nil {
-		return fallback
+func (n Node) GetInt64(path string, fallback int64) (result int64) {
+	if err := n.Get(path, &result); err != nil {
+		result = fallback
 	}
-
-	return result
-}
-
-// GetFloat64OrError returns the float at the given path, or an error if it doesn't exist.
-func (n Node) GetFloat64OrError(path string) (float64, error) {
-	inter, err := n.GetOrError(path)
-	if err != nil {
-		return 0, err
-	}
-	if v, ok := inter.(Number); ok {
-		return v.Float64()
-	}
-
-	return 0, ErrUnexpectedType{path, fmt.Sprintf("%T", inter), "number"}
+	return
 }
 
 // GetFloat64 returns the float at the given path.
 // In case of an error, the fallback is returned.
-func (n Node) GetFloat64(path string, fallback float64) float64 {
-	result, err := n.GetFloat64OrError(path)
-	if err != nil {
-		return fallback
+func (n Node) GetFloat64(path string, fallback float64) (result float64) {
+	if err := n.Get(path, &result); err != nil {
+		result = fallback
 	}
-
-	return result
+	return
 }
 
 // Compare compares the current tree with the one in new and returns a list of paths for elements that were modified, added or removed.
 //
-// A change of the content/sub-content of an array is returned as change of the array itself.
+// A change of the content/sub-content of a slice is returned as change of the slice itself.
 func (n Node) Compare(new Node) (modified, added, removed []string) {
 	return n.compare(new, "")
 }
@@ -275,7 +192,7 @@ func (n Node) compare(new Node, prefix string) (modified, added, removed []strin
 // - If there is some element in the old, but not in the new tree, the old one is kept
 // - If there is some element in the new, but not in the old tree, the new one is written
 //
-// Arrays will not be merged, but new ones will overwrite old ones.
+// Slices will not be merged, but new ones will overwrite old ones.
 func (n Node) Merge(new Node) {
 	for k, vNew := range new {
 		v, found := n[k]
@@ -298,7 +215,9 @@ func (n Node) Merge(new Node) {
 	}
 }
 
-// Check returns an error when a tree contains any malformed or illegal elements
+// Check returns an error when a tree contains any malformed or illegal elements.
+//
+// Paths returned in errors are not valid paths, as they start with root and can contain numbers for slice elements.
 func (n Node) Check() error {
 	var recursive func(v interface{}, path string) error
 	recursive = func(v interface{}, path string) error {
@@ -310,20 +229,24 @@ func (n Node) Check() error {
 					return err
 				}
 			}
-		case []Node: // TODO: Array values, arrays and other things (Use reflect package)
-			for i, child := range v {
-				err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for array elements, not really a valid path
-				if err != nil {
-					return err
-				}
-			}
 		case bool, string, Number:
 		default:
-			return ErrUnexpectedType{path, fmt.Sprintf("%T", v), ""}
+			if reflect.TypeOf(v).Kind() == reflect.Slice {
+				s := reflect.ValueOf(v)
+				for i := 0; i < s.Len(); i++ {
+					child := s.Index(i).Interface()
+					err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for slice elements, not really a valid path
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				return &ErrUnexpectedType{path, fmt.Sprintf("%T", v), ""}
+			}
 		}
 
 		return nil
 	}
 
-	return recursive(n, "")
+	return recursive(n, "root")
 }

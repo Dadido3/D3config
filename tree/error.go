@@ -14,7 +14,7 @@ type ErrElementNotFound struct {
 	path string
 }
 
-func (e ErrElementNotFound) Error() string {
+func (e *ErrElementNotFound) Error() string {
 	return fmt.Sprintf("Element at %v not found", e.path)
 }
 
@@ -23,7 +23,7 @@ type ErrPathInsideValue struct {
 	path string
 }
 
-func (e ErrPathInsideValue) Error() string {
+func (e *ErrPathInsideValue) Error() string {
 	return fmt.Sprintf("Element at %v is pointing inside value", e.path)
 }
 
@@ -33,7 +33,7 @@ type ErrUnexpectedType struct {
 	got, expected string
 }
 
-func (e ErrUnexpectedType) Error() string {
+func (e *ErrUnexpectedType) Error() string {
 	if e.path != "" {
 		if e.expected != "" {
 			return fmt.Sprintf("Element at %v is of type %v instead of %v", e.path, e.got, e.expected)
@@ -44,4 +44,22 @@ func (e ErrUnexpectedType) Error() string {
 		return fmt.Sprintf("Element is of type %v instead of %v", e.got, e.expected)
 	}
 	return fmt.Sprintf("Element is of unexpected type %v", e.got)
+}
+
+// ErrKeyIsNotString is returned if a key of a map is not of type string.
+type ErrKeyIsNotString struct {
+	key interface{}
+}
+
+func (e *ErrKeyIsNotString) Error() string {
+	return fmt.Sprintf("Key %v is of type %T. Only strings are supported", e.key, e.key)
+}
+
+// ErrNonPointerOrNil is returned when trying to write into a nil or non pointer value.
+type ErrNonPointerOrNil struct {
+	v interface{}
+}
+
+func (e *ErrNonPointerOrNil) Error() string {
+	return fmt.Sprintf("Trying to write into non pointer or nil value %v of type %T", e.v, e.v)
 }

@@ -181,7 +181,7 @@ func TestNode_CreatePath(t *testing.T) {
 	}
 }
 
-type somethingInvalid string
+type customType string
 
 func TestNode_Set(t *testing.T) {
 	type args struct {
@@ -197,7 +197,7 @@ func TestNode_Set(t *testing.T) {
 	}{
 		{"A", Node{}, args{"foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
 		{"B", Node{}.CreatePath("foo.bar.baz"), args{"foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
-		{"C", Node{}, args{"foo.bar", somethingInvalid("test")}, true, Node{}},
+		{"C", Node{}, args{"foo.bar", customType("test")}, false, Node{"foo": Node{"bar": "test"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -212,6 +212,80 @@ func TestNode_Set(t *testing.T) {
 				t.Errorf("Illegal element in tree: %v", err)
 			}
 		})
+	}
+}
+
+func TestSetGet_Struct(t *testing.T) {
+	type subStruct struct {
+		SomeString string
+	}
+	type testStruct struct {
+		SomeString        string
+		SomeInt           int8
+		SomeBool          bool
+		SomeFloat         float64 `cdb_name:"somethingRenamed"`
+		SomeSubstruct     subStruct
+		SomePointerStruct *subStruct
+		SomeMap           map[string]int
+		SomeSlice         []bool
+		SomeArray         [5]bool
+	}
+	s := testStruct{
+		"test",
+		-5,
+		true,
+		123.456,
+		subStruct{"bla"},
+		&subStruct{"foo"},
+		map[string]int{"a": -1, "b": 0, "c": 1},
+		[]bool{true, false, true},
+		[5]bool{true, false, true},
+	}
+
+	tree := Node{}
+
+	err := tree.Set("somePath", s)
+	if err != nil {
+		t.Errorf("tree.Set() failed: %v", err)
+	}
+	if err := tree.Check(); err != nil {
+		t.Errorf("Illegal element in tree: %v", err)
+	}
+
+	want := Node{
+		"somePath": Node{
+			"SomeString":       "test",
+			"SomeInt":          Number("-5"),
+			"SomeBool":         true,
+			"somethingRenamed": Number("123.456000"),
+			"SomeSubstruct": Node{
+				"SomeString": "bla",
+			},
+			"SomePointerStruct": Node{
+				"SomeString": "foo",
+			},
+			"SomeMap": Node{
+				"a": Number("-1"),
+				"b": Number("0"),
+				"c": Number("1"),
+			},
+			"SomeSlice": []interface{}{true, false, true},
+			"SomeArray": []interface{}{true, false, true, false, false},
+		},
+	}
+
+	if !reflect.DeepEqual(tree, want) {
+		t.Errorf("Got %v, want %v", tree, want)
+	}
+
+	var sResult testStruct
+
+	err = tree.Get("somePath", &sResult)
+	if err != nil {
+		t.Errorf("tree.Set() failed: %v", err)
+	}
+	if !reflect.DeepEqual(s, sResult) {
+		t.Errorf("Original value is %v, but got back %v", s, sResult)
 	}
 }
 

@@ -17,7 +17,7 @@ type Number string
 // NumberCreate takes any number type (integers, floats), and returns a number object that represents the exact value.
 func NumberCreate(num interface{}) (Number, error) {
 	switch v := num.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
 		return Number(fmt.Sprintf("%d", v)), nil
 	case float32, float64:
 		return Number(fmt.Sprintf("%f", v)), nil
@@ -25,7 +25,7 @@ func NumberCreate(num interface{}) (Number, error) {
 		return Number(v), nil
 	}
 
-	return "", ErrUnexpectedType{"", fmt.Sprintf("%T", num), ""}
+	return "", &ErrUnexpectedType{"", fmt.Sprintf("%T", num), ""}
 }
 
 // Int returns the number interpreted as int, or an error if the type doesn't match.
