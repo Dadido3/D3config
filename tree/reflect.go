@@ -8,6 +8,7 @@
 package tree
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -26,11 +27,19 @@ func getFieldOptions(f reflect.StructField) (options []string) {
 	return
 }
 
+// anyToTree deeply converts any values to a valid tree.
+// Everything is copied, it will not contain references to the original values.
 func anyToTree(v reflect.Value) (interface{}, error) {
+
+	switch v := v.Interface().(type) {
+	case Number, json.Number:
+		return NumberCreate(v)
+	}
+
 	t := v.Type()
 
 	switch v.Kind() {
-	case reflect.Ptr:
+	case reflect.Ptr, reflect.Interface:
 		if v.IsNil() {
 			return nil, nil
 		}
@@ -42,7 +51,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 			ft, fv := t.Field(i), v.Field(i)
 			name := getFieldName(ft)
 			var err error
-			if ft.PkgPath == "" { // Ignore not setable values like unexported fields
+			if ft.PkgPath == "" { // Ignore unexported fields
 				node[name], err = anyToTree(fv)
 				if err != nil {
 					return nil, err
@@ -56,7 +65,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 		for _, e := range v.MapKeys() {
 			// Only allow strings as keys, because JSON and some other formats wont allow anything else
 			if e.Kind() != reflect.String {
-				return nil, &ErrKeyIsNotString{e.Interface()}
+				return nil, &ErrKeyIsNotString{e.String(), e.Kind().String()}
 			}
 			key := e.String()
 			var err error
@@ -93,19 +102,30 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 	return nil, &ErrUnexpectedType{"", fmt.Sprintf("%v", t), ""}
 }
 
+// anyToTree writes any valid tree into a given structure/value.
+//
+// Everything is copied, it will not contain references to the tree values.
+// In case of an error, nothing will be written.
 func treeToAny(tree interface{}, v reflect.Value) error {
 	t := v.Type()
 
 	if v.Kind() != reflect.Ptr && !v.CanSet() {
-		return fmt.Errorf("Cannot modify given value %v of type %v", v, t) // TODO: Add error type for this case
+		return &ErrCannotModify{v.String(), v.Kind().String()}
 	}
 
 	switch v.Kind() {
 	case reflect.Ptr:
+		if tree == nil { // If element in tree is nil, write nil pointer
+			v.Set(reflect.Zero(t))
+			return nil
+		}
 		if v.IsNil() {
 			new := reflect.New(t.Elem())
+			if err := treeToAny(tree, new.Elem()); err != nil {
+				return err
+			}
 			v.Set(new)
-			return treeToAny(tree, new.Elem())
+			return nil
 		}
 		return treeToAny(tree, v.Elem())
 
@@ -216,5 +236,5 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 		}
 	}
 
-	return &ErrUnexpectedType{"", reflect.TypeOf(tree).String(), t.String()}
+	return &ErrUnexpectedType{"", fmt.Sprintf("%T", tree), t.Kind().String()}
 }

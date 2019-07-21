@@ -11,55 +11,55 @@ import (
 
 // ErrElementNotFound is returned if the element couldn't be found at the given path.
 type ErrElementNotFound struct {
-	path string
+	Path string
 }
 
 func (e *ErrElementNotFound) Error() string {
-	return fmt.Sprintf("Element at %v not found", e.path)
+	return fmt.Sprintf("Element at %v not found", e.Path)
 }
 
 // ErrPathInsideValue is returned if a path is pointing inside a value.
 type ErrPathInsideValue struct {
-	path string
+	Path string
 }
 
 func (e *ErrPathInsideValue) Error() string {
-	return fmt.Sprintf("Element at %v is pointing inside value", e.path)
+	return fmt.Sprintf("Element at %v is pointing inside value", e.Path)
 }
 
 // ErrUnexpectedType is returned if a type differs from the expected type.
 type ErrUnexpectedType struct {
-	path          string
-	got, expected string
+	Path          string
+	Got, Expected string
 }
 
 func (e *ErrUnexpectedType) Error() string {
-	if e.path != "" {
-		if e.expected != "" {
-			return fmt.Sprintf("Element at %v is of type %v instead of %v", e.path, e.got, e.expected)
+	if e.Path != "" {
+		if e.Expected != "" {
+			return fmt.Sprintf("Element at %v is of type %v instead of %v", e.Path, e.Got, e.Expected)
 		}
-		return fmt.Sprintf("Element at %v is of unexpected type %v", e.path, e.got)
+		return fmt.Sprintf("Element at %v is of unexpected type %v", e.Path, e.Got)
 	}
-	if e.expected != "" {
-		return fmt.Sprintf("Element is of type %v instead of %v", e.got, e.expected)
+	if e.Expected != "" {
+		return fmt.Sprintf("Element is of type %v instead of %v", e.Got, e.Expected)
 	}
-	return fmt.Sprintf("Element is of unexpected type %v", e.got)
+	return fmt.Sprintf("Element is of unexpected type %v", e.Got)
 }
 
 // ErrKeyIsNotString is returned if a key of a map is not of type string.
 type ErrKeyIsNotString struct {
-	key interface{}
+	Key, Type string
 }
 
 func (e *ErrKeyIsNotString) Error() string {
-	return fmt.Sprintf("Key %v is of type %T. Only strings are supported", e.key, e.key)
+	return fmt.Sprintf("Key %v is of type %v. Only strings are supported", e.Key, e.Type)
 }
 
-// ErrNonPointerOrNil is returned when trying to write into a nil or non pointer value.
-type ErrNonPointerOrNil struct {
-	v interface{}
+// ErrCannotModify is returned when trying to write into a nil or non pointer value.
+type ErrCannotModify struct {
+	Value, Type string
 }
 
-func (e *ErrNonPointerOrNil) Error() string {
-	return fmt.Sprintf("Trying to write into non pointer or nil value %v of type %T", e.v, e.v)
+func (e *ErrCannotModify) Error() string {
+	return fmt.Sprintf("Trying to write into non pointer or nil value %v of type %v", e.Value, e.Type)
 }

@@ -35,11 +35,11 @@ var treeA = Node{
 				"val": "string",
 			},
 		},
-		"f": []Node{
+		"f": []interface{}{
 			Node{"sub": Node{}},
 			Node{"val": true},
 		},
-		"g": []Node{
+		"g": []interface{}{
 			Node{"sub": Node{"val": false}},
 			Node{"val": true},
 		},
@@ -64,11 +64,11 @@ var treeB = Node{
 				"sub": Node{},
 			},
 		},
-		"f": []Node{
+		"f": []interface{}{
 			Node{"sub": Node{"val": false}},
 			Node{"val": true},
 		},
-		"g": []Node{
+		"g": []interface{}{
 			Node{"sub": Node{"val": false}},
 			Node{"val": true},
 		},
@@ -98,11 +98,11 @@ var treeAB = Node{
 				"val": "string",
 			},
 		},
-		"f": []Node{
+		"f": []interface{}{
 			Node{"sub": Node{"val": false}},
 			Node{"val": true},
 		},
-		"g": []Node{
+		"g": []interface{}{
 			Node{"sub": Node{"val": false}},
 			Node{"val": true},
 		},
@@ -229,6 +229,7 @@ func TestSetGet_Struct(t *testing.T) {
 		SomeMap           map[string]int
 		SomeSlice         []bool
 		SomeArray         [5]bool
+		SomeNilPointer    *subStruct
 	}
 	s := testStruct{
 		"test",
@@ -240,6 +241,7 @@ func TestSetGet_Struct(t *testing.T) {
 		map[string]int{"a": -1, "b": 0, "c": 1},
 		[]bool{true, false, true},
 		[5]bool{true, false, true},
+		nil,
 	}
 
 	tree := Node{}
@@ -269,8 +271,9 @@ func TestSetGet_Struct(t *testing.T) {
 				"b": Number("0"),
 				"c": Number("1"),
 			},
-			"SomeSlice": []interface{}{true, false, true},
-			"SomeArray": []interface{}{true, false, true, false, false},
+			"SomeSlice":      []interface{}{true, false, true},
+			"SomeArray":      []interface{}{true, false, true, false, false},
+			"SomeNilPointer": nil,
 		},
 	}
 

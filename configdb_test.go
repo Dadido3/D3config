@@ -34,11 +34,11 @@ var treeA = tree.Node{
 				"val": "string",
 			},
 		},
-		"f": []tree.Node{
+		"f": []interface{}{
 			tree.Node{"sub": tree.Node{}},
 			tree.Node{"val": true},
 		},
-		"g": []tree.Node{
+		"g": []interface{}{
 			tree.Node{"sub": tree.Node{"val": false}},
 			tree.Node{"val": true},
 		},

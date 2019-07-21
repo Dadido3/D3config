@@ -16,6 +16,7 @@ import (
 // - bool
 // - string
 // - number
+// - "nil"
 //
 // Valid child names must not contain periods (PathSeparator).
 type Node map[string]interface{}
@@ -229,23 +230,26 @@ func (n Node) Check() error {
 					return err
 				}
 			}
+			return nil
+
 		case bool, string, Number:
-		default:
-			if reflect.TypeOf(v).Kind() == reflect.Slice {
-				s := reflect.ValueOf(v)
-				for i := 0; i < s.Len(); i++ {
-					child := s.Index(i).Interface()
-					err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for slice elements, not really a valid path
-					if err != nil {
-						return err
-					}
+			return nil
+
+		case nil:
+			return nil
+
+		case []interface{}:
+			for i, child := range v {
+				err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for slice elements, not really a valid path
+				if err != nil {
+					return err
 				}
-			} else {
-				return &ErrUnexpectedType{path, fmt.Sprintf("%T", v), ""}
 			}
+			return nil
+
 		}
 
-		return nil
+		return &ErrUnexpectedType{path, fmt.Sprintf("%T", v), ""}
 	}
 
 	return recursive(n, "root")
