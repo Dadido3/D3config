@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// TODO: Handle time and other types (Formatting them correctly, instead of copying their fields)
+// TODO: Handle time and other types (Use their Text(Un)Marshaler if possible)
 
 package tree
 
@@ -14,20 +14,29 @@ import (
 	"strings"
 )
 
-func getFieldName(f reflect.StructField) (name string) {
-	name, ok := f.Tag.Lookup("cdb_name")
+func getTags(f reflect.StructField) (name string, options map[string]interface{}) {
+	name = f.Name
+	options = map[string]interface{}{}
+
+	tags, ok := f.Tag.Lookup("cdb")
 	if !ok {
-		name = f.Name
+		return
 	}
+
+	splitted := strings.Split(tags, ",")
+	name = splitted[0]
+
+	for _, v := range splitted[1:len(splitted)] {
+		switch v {
+		case "omit":
+			options[v] = true
+		}
+	}
+
 	return
 }
 
-func getFieldOptions(f reflect.StructField) (options []string) {
-	options = strings.Split(f.Tag.Get("cdb_opts"), ",")
-	return
-}
-
-// anyToTree deeply converts any values to a valid tree.
+// anyToTree recursively converts any values to a valid tree.
 // Everything is copied, it will not contain references to the original values.
 func anyToTree(v reflect.Value) (interface{}, error) {
 
@@ -49,9 +58,9 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 		node := Node{}
 		for i := 0; i < t.NumField(); i++ {
 			ft, fv := t.Field(i), v.Field(i)
-			name := getFieldName(ft)
+			name, options := getTags(ft)
 			var err error
-			if ft.PkgPath == "" { // Ignore unexported fields
+			if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
 				node[name], err = anyToTree(fv)
 				if err != nil {
 					return nil, err
@@ -102,7 +111,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 	return nil, &ErrUnexpectedType{"", fmt.Sprintf("%v", t), ""}
 }
 
-// anyToTree writes any valid tree into a given structure/value.
+// anyToTree recursively converts any tree into a given structure/value.
 //
 // Everything is copied, it will not contain references to the tree values.
 // In case of an error, nothing will be written.
@@ -134,11 +143,13 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 			rStruct := reflect.New(t).Elem()
 			for i := 0; i < t.NumField(); i++ {
 				ft, fv := t.Field(i), rStruct.Field(i)
-				name := getFieldName(ft)
-				if subTree, ok := node[name]; ok {
-					err := treeToAny(subTree, fv)
-					if err != nil {
-						return err
+				name, options := getTags(ft)
+				if !(options["omit"] == true) { // Ignore fields with "omit" set
+					if subTree, ok := node[name]; ok {
+						err := treeToAny(subTree, fv)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}

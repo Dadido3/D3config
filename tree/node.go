@@ -216,6 +216,39 @@ func (n Node) Merge(new Node) {
 	}
 }
 
+// Copy returns a copy of itself.
+func (n Node) Copy() Node {
+	var recursive func(v interface{}) interface{}
+	recursive = func(v interface{}) interface{} {
+		switch v := v.(type) {
+		case Node:
+			node := Node{}
+			for k, child := range v {
+				node[k] = recursive(child)
+			}
+			return node
+
+		case bool, string, Number:
+			return v
+
+		case nil:
+			return nil
+
+		case []interface{}:
+			slice := []interface{}{}
+			for _, child := range v {
+				slice = append(slice, recursive(child))
+			}
+			return slice
+
+		}
+
+		panic(fmt.Sprintf("Got invalid element %v of type %T in tree", v, v))
+	}
+
+	return recursive(n).(Node) // Something went really wrong if the result is not a Node
+}
+
 // Check returns an error when a tree contains any malformed or illegal elements.
 //
 // Paths returned in errors are not valid paths, as they start with root and can contain numbers for slice elements.

@@ -223,7 +223,7 @@ func TestSetGet_Struct(t *testing.T) {
 		SomeString        string
 		SomeInt           int8
 		SomeBool          bool
-		SomeFloat         float64 `cdb_name:"somethingRenamed"`
+		SomeFloat         float64 `cdb:"somethingRenamed"`
 		SomeSubstruct     subStruct
 		SomePointerStruct *subStruct
 		SomeMap           map[string]int
