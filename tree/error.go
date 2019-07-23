@@ -27,6 +27,16 @@ func (e *ErrPathInsideValue) Error() string {
 	return fmt.Sprintf("Element at %v is pointing inside value", e.Path)
 }
 
+// ErrPathInvalid is returned if a path is invalid.
+type ErrPathInvalid struct {
+	Path   string
+	Reason string
+}
+
+func (e *ErrPathInvalid) Error() string {
+	return fmt.Sprintf("Path %v is invalid: %v", e.Path, e.Reason)
+}
+
 // ErrUnexpectedType is returned if a type differs from the expected type.
 type ErrUnexpectedType struct {
 	Path          string

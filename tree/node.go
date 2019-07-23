@@ -27,6 +27,8 @@ type Node map[string]interface{}
 func (n Node) CreatePath(path string) Node {
 	elements := PathSplit(path)
 
+	elements = elements[1:len(elements)] // Omit first element
+
 	node := n
 	for _, e := range elements {
 		child, ok := node[e]
@@ -53,18 +55,34 @@ func (n Node) CreatePath(path string) Node {
 func (n Node) Set(path string, obj interface{}) error {
 	var newElement interface{}
 
+	pathElements := PathSplit(path)
+	if pathElements[0] != "" {
+		return &ErrPathInvalid{path, "First path element has to be empty"}
+	}
+
 	newElement, err := anyToTree(reflect.ValueOf(obj))
 	if err != nil {
 		return err
 	}
 
-	pathElements := PathSplit(path)
-	lastElement := pathElements[len(pathElements)-1]
-	node := n
 	if len(pathElements) > 1 {
-		node = n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
+		// Path points on some subelement
+		lastElement := pathElements[len(pathElements)-1]
+		node := n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
+		node[lastElement] = newElement
+	} else {
+		// Special case when the path points on this node
+		newNode, ok := newElement.(Node)
+		if !ok {
+			return &ErrCannotModify{fmt.Sprintf("%v", n), fmt.Sprintf("%T", n)}
+		}
+		for k := range n {
+			delete(n, k)
+		}
+		for k, v := range newNode {
+			n[k] = v
+		}
 	}
-	node[lastElement] = newElement
 
 	return nil
 }
@@ -72,6 +90,8 @@ func (n Node) Set(path string, obj interface{}) error {
 // Get reads the element at the path, and writes it into the given object obj.
 func (n Node) Get(path string, obj interface{}) error {
 	elements := PathSplit(path)
+
+	elements = elements[1:len(elements)] // Omit first element
 
 	inter := interface{}(n)
 	for _, e := range elements {
@@ -129,7 +149,7 @@ func (n Node) GetFloat64(path string, fallback float64) (result float64) {
 //
 // A change of the content/sub-content of a slice is returned as change of the slice itself.
 func (n Node) Compare(new Node) (modified, added, removed []string) {
-	return n.compare(new, "")
+	return n.compare(new, ".")
 }
 
 func (n Node) compare(new Node, prefix string) (modified, added, removed []string) {
@@ -251,7 +271,7 @@ func (n Node) Copy() Node {
 
 // Check returns an error when a tree contains any malformed or illegal elements.
 //
-// Paths returned in errors are not valid paths, as they start with root and can contain numbers for slice elements.
+// Paths returned in errors are not valid paths, as they can contain numbers for slice elements.
 func (n Node) Check() error {
 	var recursive func(v interface{}, path string) error
 	recursive = func(v interface{}, path string) error {
@@ -285,5 +305,5 @@ func (n Node) Check() error {
 		return &ErrUnexpectedType{path, fmt.Sprintf("%T", v), ""}
 	}
 
-	return recursive(n, "root")
+	return recursive(n, "")
 }

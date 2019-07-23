@@ -122,18 +122,18 @@ func TestNode_Compare(t *testing.T) {
 		wantRemoved  []string
 	}{
 		{"A -> B", treeA, treeB,
-			[]string{"someString", "subnode.a.foo", "subnode.b.someFloat", "subnode.c", "subnode.f"},
-			[]string{"subnode.a.foo.sub", "subnode.d", "subnode.d.sub", "subnode.d.sub.sub"},
-			[]string{"subnode.c.sub", "subnode.c.sub.sub", "subnode.e", "subnode.e.sub", "subnode.e.sub.val"},
+			[]string{".someString", ".subnode.a.foo", ".subnode.b.someFloat", ".subnode.c", ".subnode.f"},
+			[]string{".subnode.a.foo.sub", ".subnode.d", ".subnode.d.sub", ".subnode.d.sub.sub"},
+			[]string{".subnode.c.sub", ".subnode.c.sub.sub", ".subnode.e", ".subnode.e.sub", ".subnode.e.sub.val"},
 		},
 		{"A -> 0", treeA, treeEmpty,
 			[]string{},
 			[]string{},
-			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val", "subnode.f", "subnode.g"},
+			[]string{".someString", ".someNumber", ".subnode", ".subnode.a", ".subnode.b", ".subnode.c", ".subnode.e", ".subnode.a.foo", ".subnode.b.someFloat", ".subnode.c.sub", ".subnode.c.sub.sub", ".subnode.e.sub", ".subnode.e.sub.val", ".subnode.f", ".subnode.g"},
 		},
 		{"0 -> A", treeEmpty, treeA,
 			[]string{},
-			[]string{"someString", "someNumber", "subnode", "subnode.a", "subnode.b", "subnode.c", "subnode.e", "subnode.a.foo", "subnode.b.someFloat", "subnode.c.sub", "subnode.c.sub.sub", "subnode.e.sub", "subnode.e.sub.val", "subnode.f", "subnode.g"},
+			[]string{".someString", ".someNumber", ".subnode", ".subnode.a", ".subnode.b", ".subnode.c", ".subnode.e", ".subnode.a.foo", ".subnode.b.someFloat", ".subnode.c.sub", ".subnode.c.sub.sub", ".subnode.e.sub", ".subnode.e.sub.val", ".subnode.f", ".subnode.g"},
 			[]string{},
 		},
 	}
@@ -162,8 +162,8 @@ func TestNode_CreatePath(t *testing.T) {
 		want     Node
 		wantThis Node
 	}{
-		{"A", Node{}, "test.123.foo.bar", Node{}, Node{"test": Node{"123": Node{"foo": Node{"bar": Node{}}}}}},
-		{"B", Node{"foo": Node{"value": "string", "bar": Number("1234")}}, "foo.bar.baz", Node{}, Node{"foo": Node{"value": "string", "bar": Node{"baz": Node{}}}}},
+		{"A", Node{}, ".test.123.foo.bar", Node{}, Node{"test": Node{"123": Node{"foo": Node{"bar": Node{}}}}}},
+		{"B", Node{"foo": Node{"value": "string", "bar": Number("1234")}}, ".foo.bar.baz", Node{}, Node{"foo": Node{"value": "string", "bar": Node{"baz": Node{}}}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -198,9 +198,9 @@ func TestNode_Set(t *testing.T) {
 		wantErr  bool
 		wantThis Node
 	}{
-		{"A", Node{}, args{"foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
-		{"B", Node{}.CreatePath("foo.bar.baz"), args{"foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
-		{"C", Node{}, args{"foo.bar", customType("test")}, false, Node{"foo": Node{"bar": "test"}}},
+		{"A", Node{}, args{".foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
+		{"B", Node{}.CreatePath("foo.bar.baz"), args{".foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
+		{"C", Node{}, args{".foo.bar", customType("test")}, false, Node{"foo": Node{"bar": "test"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -249,7 +249,7 @@ func TestSetGet_Struct(t *testing.T) {
 
 	tree := Node{}
 
-	err := tree.Set("somePath", s)
+	err := tree.Set(".somePath", s)
 	if err != nil {
 		t.Errorf("tree.Set() failed: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestSetGet_Struct(t *testing.T) {
 
 	var sResult testStruct
 
-	err = tree.Get("somePath", &sResult)
+	err = tree.Get(".somePath", &sResult)
 	if err != nil {
 		t.Errorf("tree.Set() failed: %v", err)
 	}

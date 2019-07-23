@@ -22,12 +22,13 @@ func TestSimple1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewConfig() failed: %v", err)
 	}
+	defer c.Close()
 
-	if err := c.Get("subnode.b", &testStruct); err != nil {
+	if err := c.Get(".subnode.b", &testStruct); err != nil {
 		t.Errorf("Get() failed: %v", err)
 	}
 
-	if err := c.Set("subnode.e.sub", []string{"foo, bar"}); err != nil {
+	if err := c.Set(".subnode.e.sub", []string{"foo, bar"}); err != nil {
 		t.Errorf("Set() failed: %v", err)
 	}
 }
