@@ -1,31 +1,26 @@
 {
     "someNumber": 123,
-    "someString": "someStringEdited",
+    "someString": "someString",
     "subnode": {
         "a": {
-            "foo": {
-                "sub": {}
-            }
+            "foo": "bar"
         },
         "b": {
-            "someFloat": 123.4567
+            "someFloat": 123.456
         },
-        "c": "NothingToSeeHere",
-        "d": {
+        "c": {
             "sub": {
                 "sub": {}
             }
         },
         "e": {
-            "sub": {
-                "val": "string"
-            }
+            "sub": [
+                "foo, bar"
+            ]
         },
         "f": [
             {
-                "sub": {
-                    "val": false
-                }
+                "sub": {}
             },
             {
                 "val": true

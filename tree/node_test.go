@@ -6,6 +6,9 @@
 package tree
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -314,4 +317,43 @@ func TestNode_Merge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMarshallingAndUnmarshalling(t *testing.T) {
+	if err := treeA.Check(); err != nil {
+		t.Errorf("Illegal element in tree: %v", err)
+	}
+
+	bytes, err := json.MarshalIndent(treeA, "", "    ")
+	if err != nil {
+		t.Errorf("json.Marshal() failed: %v", err)
+	}
+	f, err := os.Create(filepath.Join(".", "..", "testfiles", "json", "a.json"))
+	if err != nil {
+		t.Errorf("os.Create() failed: %v", err)
+	}
+	defer f.Close()
+
+	f.Write(bytes)
+
+	result := Node{}
+	err = json.Unmarshal(bytes, &result)
+	if err != nil {
+		t.Errorf("json.Unmarshal() failed: %v", err)
+	}
+	if err := result.Check(); err != nil {
+		t.Errorf("Illegal element in tree: %v", err)
+	}
+
+	bytes, err = json.MarshalIndent(result, "", "    ")
+	if err != nil {
+		t.Errorf("json.Marshal() failed: %v", err)
+	}
+	f, err = os.Create(filepath.Join(".", "..", "testfiles", "json", "a_readback.json"))
+	if err != nil {
+		t.Errorf("os.Create() failed: %v", err)
+	}
+	defer f.Close()
+
+	f.Write(bytes)
 }

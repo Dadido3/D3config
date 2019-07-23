@@ -1,40 +1,45 @@
 {
-  "someNumber": 123,
-  "someString": "someString",
-  "subnode": {
-    "a": {
-      "foo": "bar"
-    },
-    "b": {
-      "someFloat": 123.456
-    },
-    "c": {
-      "sub": {
-        "sub": {}
-      }
-    },
-    "e": {
-      "sub": {
-        "val": "string"
-      }
-    },
-    "f": [
-      {
-        "sub": {}
-      },
-      {
-        "val": true
-      }
-    ],
-    "g": [
-      {
-        "sub": {
-          "val": false
-        }
-      },
-      {
-        "val": true
-      }
-    ]
-  }
+    "someNumber": 123,
+    "someString": "someStringEdited",
+    "subnode": {
+        "a": {
+            "foo": {
+                "sub": {}
+            }
+        },
+        "b": {
+            "someFloat": 123.4567
+        },
+        "c": "NothingToSeeHere",
+        "d": {
+            "sub": {
+                "sub": {}
+            }
+        },
+        "e": {
+            "sub": {
+                "val": "string"
+            }
+        },
+        "f": [
+            {
+                "sub": {
+                    "val": false
+                }
+            },
+            {
+                "val": true
+            }
+        ],
+        "g": [
+            {
+                "sub": {
+                    "val": false
+                }
+            },
+            {
+                "val": true
+            }
+        ]
+    }
 }

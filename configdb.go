@@ -3,4 +3,284 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+// TODO: Cache trees of files, so it operations don't need to go through the file system
+
 package configdb
+
+import (
+	"fmt"
+	"sync"
+
+	"github.com/Dadido3/configdb/tree"
+)
+
+type eventReset struct {
+	path       string
+	resultChan chan<- error
+}
+
+type eventSet struct {
+	path       string
+	object     interface{}
+	resultChan chan<- error
+}
+
+type eventRegister struct {
+	paths      []string
+	callback   func(c *Config, modified, added, removed []string)
+	resultChan chan<- int
+}
+
+type eventUnregister struct {
+	id         int
+	resultChan chan<- struct{}
+}
+
+type Config struct {
+	eventChan    chan interface{}
+	listenerChan chan interface{}
+
+	tree      tree.Node // Tree is only modified by the "Tree update handler" goroutine, to prevent deadlocks and out of sync data
+	treeMutex sync.RWMutex
+
+	waitGroup sync.WaitGroup
+}
+
+type listener struct {
+	paths    []string
+	callback func(c *Config, modified, added, removed []string)
+}
+
+// NewConfig creates a new Config object, duh.
+func NewConfig(files []File) (*Config, error) {
+	c := &Config{
+		eventChan:    make(chan interface{}),
+		listenerChan: make(chan interface{}),
+	}
+
+	readConfig := func(files []File) (tree.Node, error) {
+		result := tree.Node{}
+
+		for i := len(files) - 1; i >= 0; i-- {
+			file := files[i]
+			t, err := file.read()
+			if err != nil {
+				return nil, err
+			}
+			result.Merge(t)
+		}
+
+		return result, nil
+	}
+
+	setObject := func(files []File, path string, obj interface{}) error {
+		if len(files) <= 0 {
+			return fmt.Errorf("There are no files to write to")
+		}
+		file := files[0]
+
+		t, err := file.read()
+		if err != nil {
+			return err
+		}
+
+		if err := t.Set(path, obj); err != nil {
+			return err
+		}
+
+		if err := file.write(t); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	resetObject := func(files []File, path string) error {
+		if len(files) <= 0 {
+			return fmt.Errorf("There are no files to write to")
+		}
+		file := files[0]
+
+		t, err := file.read()
+		if err != nil {
+			return err
+		}
+
+		// TODO: Remove object from tree
+
+		if err := file.write(t); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Try to read files and build config tree
+	if tree, err := readConfig(files); err == nil {
+		c.tree = tree
+	} else {
+		return nil, err
+	}
+
+	// TODO: Make treeChan non blocking (Discard older queue elements)
+	treeChan := make(chan tree.Node) // New (already merged) trees are put here to be compared and distributed to listeners
+
+	// Event handler goroutine
+	c.waitGroup.Add(1)
+	go func() {
+		defer c.waitGroup.Done()
+		defer close(treeChan)
+
+		changeChan := make(chan struct{}) // Channel for file changes that trigger a reload of the config tree
+		defer close(changeChan)
+
+		for _, file := range files {
+			file.registerWatcher(changeChan) // TODO: Handle error
+			defer file.registerWatcher(nil)
+		}
+		defer func() {
+			go func() {
+				for range changeChan {
+					// When closing, read all changeChan events
+				}
+			}()
+		}()
+
+		for {
+			select {
+			case <-changeChan:
+				tree, err := readConfig(files)
+				if err == nil {
+					// TODO: Handle error
+					continue
+				}
+				c.tree = tree
+
+			case u, ok := <-c.eventChan:
+				if !ok {
+					return
+				}
+				switch u := u.(type) {
+				case eventReset:
+					err := resetObject(files, u.path)
+					u.resultChan <- err
+
+				case eventSet:
+					err := setObject(files, u.path, u.object)
+					u.resultChan <- err
+
+				default:
+					panic(fmt.Sprintf("Got invalid element %v of type %T in event channel", u, u))
+				}
+			}
+		}
+	}()
+
+	sendChanges := func(l listener, modified, added, removed []string) {
+		for _, lPath := range l.paths {
+			tempModified, tempAdded, tempRemoved := []string{}, []string{}, []string{}
+			for _, path := range modified {
+				if tree.PathContains(path, lPath) {
+					tempModified = append(tempModified, path)
+				}
+			}
+			for _, path := range added {
+				if tree.PathContains(path, lPath) {
+					tempAdded = append(tempAdded, path)
+				}
+			}
+			for _, path := range removed {
+				if tree.PathContains(path, lPath) {
+					tempRemoved = append(tempRemoved, path)
+				}
+			}
+			if len(tempModified) > 0 || len(tempAdded) > 0 || len(tempRemoved) > 0 {
+				l.callback(c, tempModified, tempAdded, tempRemoved)
+			}
+		}
+	}
+
+	// Tree update handler goroutine (Also distributes tree events to listeners)
+	c.waitGroup.Add(1)
+	go func() {
+		defer c.waitGroup.Done()
+
+		listeners := make(map[int]listener) // List of registered listeners
+		listenersCounter := 0
+
+		for {
+			select {
+			case t, ok := <-treeChan:
+				if !ok {
+					return
+				}
+
+				modified, added, removed := c.tree.Compare(t) // No mutex needed, as the tree is only modified in this goroutine
+				c.treeMutex.Lock()
+				c.tree = t
+				c.treeMutex.Unlock()
+
+				wg := sync.WaitGroup{}
+				for _, l := range listeners {
+					wg.Add(1)
+					go func(l listener) {
+						defer wg.Done()
+						sendChanges(l, modified, added, removed)
+					}(l)
+				}
+				wg.Wait()
+
+			case e := <-c.listenerChan:
+				switch e := e.(type) {
+				case eventRegister:
+					l := listener{e.paths, e.callback}
+					listeners[listenersCounter] = l
+					e.resultChan <- listenersCounter
+					listenersCounter++
+					modified, added, removed := tree.Node{}.Compare(c.tree) // Compare empty tree with current one
+					sendChanges(l, modified, added, removed)                // No mutex needed, as the tree is only modified in this goroutine
+
+				case eventUnregister:
+					delete(listeners, e.id)
+					e.resultChan <- struct{}{}
+
+				default:
+					panic(fmt.Sprintf("Got invalid element %v of type %T in listener channel", e, e))
+
+				}
+			}
+		}
+	}()
+
+	return c, nil
+}
+
+func (c *Config) Register(paths []string, callback func(c *Config, modified, added, removed []string)) int {
+	resultChan := make(chan int)
+	c.listenerChan <- eventRegister{paths, callback, resultChan}
+	return <-resultChan
+}
+
+func (c *Config) Unregister(id int) {
+	resultChan := make(chan struct{})
+	c.listenerChan <- eventUnregister{id, resultChan}
+	<-resultChan
+}
+
+func (c *Config) Set(path string, object interface{}) error {
+	resultChan := make(chan error)
+	c.eventChan <- eventSet{path, object, resultChan}
+	return <-resultChan
+}
+
+func (c *Config) Get(path string, object interface{}) error {
+	c.treeMutex.RLock()
+	defer c.treeMutex.RUnlock()
+
+	return c.tree.Get(path, object)
+}
+
+func (c *Config) Close() {
+	close(c.eventChan)
+	c.waitGroup.Wait()
+}

@@ -111,7 +111,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 	return nil, &ErrUnexpectedType{"", fmt.Sprintf("%v", t), ""}
 }
 
-// anyToTree recursively converts any tree into a given structure/value.
+// treeToAny recursively converts any tree into a given structure/value.
 //
 // Everything is copied, it will not contain references to the tree values.
 // In case of an error, nothing will be written.
@@ -129,6 +129,9 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 			return nil
 		}
 		if v.IsNil() {
+			if !v.CanSet() {
+				return &ErrCannotModify{v.String(), v.Kind().String()}
+			}
 			new := reflect.New(t.Elem())
 			if err := treeToAny(tree, new.Elem()); err != nil {
 				return err
@@ -144,7 +147,7 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 			for i := 0; i < t.NumField(); i++ {
 				ft, fv := t.Field(i), rStruct.Field(i)
 				name, options := getTags(ft)
-				if !(options["omit"] == true) { // Ignore fields with "omit" set
+				if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
 					if subTree, ok := node[name]; ok {
 						err := treeToAny(subTree, fv)
 						if err != nil {

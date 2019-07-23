@@ -1,7 +1,9 @@
 {
     "cSpell.words": [
         "configdb",
+        "fsnotify",
         "unexported",
+        "unregister",
         "vogel"
     ],
     "licenser.author": "David Vogel",
