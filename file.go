@@ -7,6 +7,7 @@ package configdb
 
 import "github.com/Dadido3/configdb/tree"
 
+// File interface.
 type File interface {
 	read() (tree.Node, error)
 	write(t tree.Node) error

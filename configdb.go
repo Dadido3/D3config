@@ -37,6 +37,11 @@ type eventUnregister struct {
 	resultChan chan<- struct{}
 }
 
+// Config stores any data structure as tree internally.
+// Create this by using NewConfig().
+//
+// Use the Set(), Reset() and Get() methods to interact with that tree.
+// Changes made to the config are immediately stored in the configuration file.
 type Config struct {
 	eventChan    chan interface{}
 	listenerChan chan interface{}
@@ -52,7 +57,16 @@ type listener struct {
 	callback func(c *Config, modified, added, removed []string)
 }
 
-// NewConfig creates a new Config object, duh.
+// NewConfig returns a new Config object.
+//
+// It takes a list of File objects that can be created with UseJSONFile(path) and similar functions.
+// All files in the list are merged into one big configuration tree.
+// The priority of the files is descending, so elements/variables from the first files will overwrite the ones in files with lower priority.
+//
+// If a file is changed on disk, it is reloaded.
+// Changes in the configuration tree will be broadcasted to any listener.
+//
+// If any of these files couldn't be read, this function will return an error.
 func NewConfig(files []File) (*Config, error) {
 	c := &Config{
 		eventChan:    make(chan interface{}),
@@ -266,30 +280,43 @@ func NewConfig(files []File) (*Config, error) {
 	return c, nil
 }
 
+// Register will add the given callback to the internal listener list.
+// A list of paths can be defined to ignore all events that are not inside the given paths.
+//
+// An integer is returned, that can be used to Unregister() the callback.
 func (c *Config) Register(paths []string, callback func(c *Config, modified, added, removed []string)) int {
-	resultChan := make(chan int)
+	resultChan := make(chan int) // TODO: Empty path array should not filter anything
 	c.listenerChan <- eventRegister{paths, callback, resultChan}
 	return <-resultChan
 }
 
+// Unregister removes a callback from the internal listener list.
 func (c *Config) Unregister(id int) {
 	resultChan := make(chan struct{})
 	c.listenerChan <- eventUnregister{id, resultChan}
 	<-resultChan
 }
 
+// Set changes the element at the given path.
+//
+// It's possible to modify the root node, with the path "", if the passed object is a map or a structure.
+//
+// Changes are written immediately to the configuration files.
 func (c *Config) Set(path string, object interface{}) error {
 	resultChan := make(chan error)
 	c.eventChan <- eventSet{path, object, resultChan}
 	return <-resultChan
 }
 
+// Reset will remove the element at the given path.
+// If there are lower priority configuration files
 func (c *Config) Reset(path string) error {
 	resultChan := make(chan error)
 	c.eventChan <- eventReset{path, resultChan}
 	return <-resultChan
 }
 
+// Get will marshal the elements at path into the given object.
 func (c *Config) Get(path string, object interface{}) error {
 	c.treeMutex.RLock()
 	defer c.treeMutex.RUnlock()
@@ -297,6 +324,7 @@ func (c *Config) Get(path string, object interface{}) error {
 	return c.tree.Get(path, object)
 }
 
+// Close will free all ressources/watchers.
 func (c *Config) Close() {
 	close(c.eventChan)
 	c.waitGroup.Wait()

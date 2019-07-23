@@ -15,12 +15,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// JSONFile represents a json file on disk.
 type JSONFile struct {
 	path string
 
 	watcher *fsnotify.Watcher
 }
 
+// UseJSONFile returns a JSONFile object.
 func UseJSONFile(path string) *JSONFile {
 	f := &JSONFile{
 		path:    path,
