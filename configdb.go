@@ -259,7 +259,7 @@ func NewConfig(files []File) (*Config, error) {
 				switch e := e.(type) {
 				case eventRegister:
 					l := listener{e.paths, e.callback}
-					if len(l.paths) = 0 {
+					if len(l.paths) == 0 {
 						l.paths = []string{""} // Add at least one empty path that fits all, if there are not paths defined
 					}
 					listeners[listenersCounter] = l
