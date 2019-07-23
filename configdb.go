@@ -107,7 +107,9 @@ func NewConfig(files []File) (*Config, error) {
 			return err
 		}
 
-		// TODO: Remove object from tree
+		if err := t.Remove(path); err != nil {
+			return err
+		}
 
 		if err := file.write(t); err != nil {
 			return err
@@ -279,6 +281,12 @@ func (c *Config) Unregister(id int) {
 func (c *Config) Set(path string, object interface{}) error {
 	resultChan := make(chan error)
 	c.eventChan <- eventSet{path, object, resultChan}
+	return <-resultChan
+}
+
+func (c *Config) Reset(path string) error {
+	resultChan := make(chan error)
+	c.eventChan <- eventReset{path, resultChan}
 	return <-resultChan
 }
 

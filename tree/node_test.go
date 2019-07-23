@@ -167,7 +167,10 @@ func TestNode_CreatePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.n.CreatePath(tt.path)
+			got, err := tt.n.CreatePath(tt.path)
+			if err != nil {
+				t.Errorf("CreatePath() failed: %v", err)
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Node.CreatePath() = %v, want %v", got, tt.want)
 			}
@@ -191,6 +194,12 @@ func TestNode_Set(t *testing.T) {
 		path    string
 		element interface{}
 	}
+
+	tempNode, err := Node{}.CreatePath(".foo.bar.baz")
+	if err != nil {
+		t.Fatalf("CreatePath() failed: %v", err)
+	}
+
 	tests := []struct {
 		name     string
 		n        Node
@@ -199,7 +208,7 @@ func TestNode_Set(t *testing.T) {
 		wantThis Node
 	}{
 		{"A", Node{}, args{".foo.bar", "test"}, false, Node{"foo": Node{"bar": "test"}}},
-		{"B", Node{}.CreatePath("foo.bar.baz"), args{".foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
+		{"B", tempNode, args{".foo.bar", 123}, false, Node{"foo": Node{"bar": Number("123")}}},
 		{"C", Node{}, args{".foo.bar", customType("test")}, false, Node{"foo": Node{"bar": "test"}}},
 	}
 	for _, tt := range tests {
@@ -356,4 +365,32 @@ func TestMarshallingAndUnmarshalling(t *testing.T) {
 	defer f.Close()
 
 	f.Write(bytes)
+}
+
+func TestNode_Remove(t *testing.T) {
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		name     string
+		n        Node
+		args     args
+		wantErr  bool
+		wantThis Node
+	}{
+		{"A", treeA.Copy(), args{".subnode.e"}, false, treeB},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.n.Remove(tt.args.path); (err != nil) != tt.wantErr {
+				t.Errorf("Node.Remove() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+		if err := tt.n.Check(); err != nil {
+			t.Errorf("Illegal element in tree: %v", err)
+		}
+		if !reflect.DeepEqual(tt.n, tt.wantThis) {
+			t.Errorf("this = %v, want %v", tt.n, tt.wantThis)
+		}
+	}
 }

@@ -24,9 +24,12 @@ type Node map[string]interface{}
 // CreatePath makes sure that a given path exists by creating nodes and overwriting existing values.
 //
 // The function will return the node the path points to.
-func (n Node) CreatePath(path string) Node {
+func (n Node) CreatePath(path string) (Node, error) {
 	elements := PathSplit(path)
 
+	if elements[0] != "" {
+		return nil, &ErrPathInvalid{path, "First path element has to be empty"}
+	}
 	elements = elements[1:len(elements)] // Omit first element
 
 	node := n
@@ -48,7 +51,7 @@ func (n Node) CreatePath(path string) Node {
 		}
 	}
 
-	return node
+	return node, nil
 }
 
 // Set creates all needed nodes and sets the element at the given path.
@@ -68,7 +71,10 @@ func (n Node) Set(path string, obj interface{}) error {
 	if len(pathElements) > 1 {
 		// Path points on some subelement
 		lastElement := pathElements[len(pathElements)-1]
-		node := n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
+		node, err := n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
+		if err != nil {
+			return err
+		}
 		node[lastElement] = newElement
 	} else {
 		// Special case when the path points on this node
@@ -91,6 +97,9 @@ func (n Node) Set(path string, obj interface{}) error {
 func (n Node) Get(path string, obj interface{}) error {
 	elements := PathSplit(path)
 
+	if elements[0] != "" {
+		return &ErrPathInvalid{path, "First path element has to be empty"}
+	}
 	elements = elements[1:len(elements)] // Omit first element
 
 	inter := interface{}(n)
@@ -107,6 +116,36 @@ func (n Node) Get(path string, obj interface{}) error {
 	}
 
 	return treeToAny(inter, reflect.ValueOf(obj))
+}
+
+// Remove removes the element and its children at the given path from the tree.
+func (n Node) Remove(path string) error {
+	pathElements := PathSplit(path)
+
+	if pathElements[0] != "" {
+		return &ErrPathInvalid{path, "First path element has to be empty"}
+	}
+	if len(pathElements) < 2 {
+		return &ErrCannotModify{fmt.Sprintf("%v", n), fmt.Sprintf("%T", n)}
+	}
+	lastElement := pathElements[len(pathElements)-1]
+	pathElements = pathElements[1 : len(pathElements)-1] // Omit first and last element
+
+	node := n
+	for _, e := range pathElements {
+		child, ok := node[e]
+		if !ok {
+			return &ErrElementNotFound{path} // Element at path doesn't exist
+		}
+
+		node, ok = child.(Node)
+		if !ok {
+			return &ErrPathInsideValue{path} // Path points inside a value
+		}
+	}
+
+	delete(node, lastElement)
+	return nil
 }
 
 // GetBool returns the bool at the given path.
