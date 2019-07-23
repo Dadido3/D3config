@@ -259,6 +259,9 @@ func NewConfig(files []File) (*Config, error) {
 				switch e := e.(type) {
 				case eventRegister:
 					l := listener{e.paths, e.callback}
+					if len(l.paths) = 0 {
+						l.paths = []string{""} // Add at least one empty path that fits all, if there are not paths defined
+					}
 					listeners[listenersCounter] = l
 					e.resultChan <- listenersCounter
 					listenersCounter++
@@ -285,7 +288,7 @@ func NewConfig(files []File) (*Config, error) {
 //
 // An integer is returned, that can be used to Unregister() the callback.
 func (c *Config) Register(paths []string, callback func(c *Config, modified, added, removed []string)) int {
-	resultChan := make(chan int) // TODO: Empty path array should not filter anything
+	resultChan := make(chan int)
 	c.listenerChan <- eventRegister{paths, callback, resultChan}
 	return <-resultChan
 }

@@ -82,9 +82,6 @@ func (n Node) Set(path string, obj interface{}) error {
 		if !ok {
 			return &ErrCannotModify{fmt.Sprintf("%v", n), fmt.Sprintf("%T", n)}
 		}
-		for k := range n {
-			delete(n, k)
-		}
 		for k, v := range newNode {
 			n[k] = v
 		}
