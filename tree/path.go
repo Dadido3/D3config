@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-// TODO: Change path to start at the (unnamed) root (eg: ".foo.bar")
-
 // PathSeparator delimits single path elements.
 const PathSeparator = "."
 

@@ -9,6 +9,7 @@ package configdb
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/Dadido3/configdb/tree"
@@ -117,13 +118,12 @@ func NewConfig(files []File) (*Config, error) {
 
 	// Try to read files and build config tree
 	if tree, err := readConfig(files); err == nil {
-		c.tree = tree
+		c.tree = tree // No need to lock mutex here, as nothing else can access the tree
 	} else {
 		return nil, err
 	}
 
-	// TODO: Make treeChan non blocking (Discard older queue elements)
-	treeChan := make(chan tree.Node) // New (already merged) trees are put here to be compared and distributed to listeners
+	treeChan := make(chan tree.Node, 1) // New (already merged) trees are put here to be compared and distributed to listeners
 
 	// Event handler goroutine
 	c.waitGroup.Add(1)
@@ -154,7 +154,16 @@ func NewConfig(files []File) (*Config, error) {
 					// TODO: Handle error
 					continue
 				}
-				c.tree = tree
+				// Write tree into tree channel, or replace the queued element if the goroutine is busy. This is non blocking
+				select {
+				case treeChan <- tree:
+				default:
+					select {
+					case <-treeChan:
+					default:
+					}
+					treeChan <- tree
+				}
 
 			case u, ok := <-c.eventChan:
 				if !ok {
@@ -170,7 +179,7 @@ func NewConfig(files []File) (*Config, error) {
 					u.resultChan <- err
 
 				default:
-					panic(fmt.Sprintf("Got invalid element %v of type %T in event channel", u, u))
+					log.Panicf("Got invalid element %v of type %T in event channel", u, u)
 				}
 			}
 		}
@@ -245,7 +254,7 @@ func NewConfig(files []File) (*Config, error) {
 					e.resultChan <- struct{}{}
 
 				default:
-					panic(fmt.Sprintf("Got invalid element %v of type %T in listener channel", e, e))
+					log.Panicf("Got invalid element %v of type %T in listener channel", e, e)
 
 				}
 			}
