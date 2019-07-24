@@ -83,6 +83,9 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 		node := Node{}
 		for _, e := range v.MapKeys() {
 			// Only allow strings as keys, because JSON and some other formats wont allow anything else
+			for e.Kind() == reflect.Interface || e.Kind() == reflect.Ptr {
+				e = e.Elem()
+			}
 			if e.Kind() != reflect.String {
 				return nil, &ErrKeyIsNotString{e.String(), e.Kind().String()}
 			}

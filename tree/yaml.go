@@ -6,20 +6,16 @@
 package tree
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 )
 
-// UnmarshalJSON will unmarshal json data into a Node object.
+// UnmarshalYAML will unmarshal yaml data into a Node object.
 // It converts anything to valid tree objects.
-func (n Node) UnmarshalJSON(b []byte) error {
+func (n Node) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 
 	var root map[string]interface{}
-	d := json.NewDecoder(bytes.NewReader(b))
-	d.UseNumber()
-	err := d.Decode(&root)
+	err := unmarshal(&root)
 	if err != nil {
 		return err
 	}

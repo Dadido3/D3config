@@ -271,7 +271,7 @@ func TestSetGet_Struct(t *testing.T) {
 			"SomeString":       "test",
 			"SomeInt":          Number("-5"),
 			"SomeBool":         true,
-			"somethingRenamed": Number("123.456000"),
+			"somethingRenamed": Number("123.456"),
 			"SomeSubstruct": Node{
 				"SomeString": "bla",
 			},

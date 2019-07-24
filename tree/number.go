@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Number can represent any integer or float type.
@@ -19,10 +21,14 @@ func NumberCreate(num interface{}) (Number, error) {
 	switch v := num.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
 		return Number(fmt.Sprintf("%d", v)), nil
-	case float32, float64:
-		return Number(fmt.Sprintf("%f", v)), nil
+	case float32:
+		return Number(strconv.FormatFloat(float64(v), 'f', -1, 32)), nil
+	case float64:
+		return Number(strconv.FormatFloat(float64(v), 'f', -1, 64)), nil
 	case json.Number:
 		return Number(v), nil
+	case Number:
+		return v, nil
 	}
 
 	return "", &ErrUnexpectedType{"", fmt.Sprintf("%T", num), ""}
@@ -65,4 +71,14 @@ func (n Number) String() (string, error) {
 // MarshalJSON writes the raw string of the Number type
 func (n Number) MarshalJSON() ([]byte, error) {
 	return []byte(n), nil
+}
+
+// MarshalYAML writes the raw string of the Number type
+func (n Number) MarshalYAML() (interface{}, error) {
+	yn := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: string(n),
+		Style: yaml.TaggedStyle,
+	}
+	return yn, nil
 }

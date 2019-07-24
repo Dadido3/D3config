@@ -20,7 +20,7 @@ func TestInit(t *testing.T) {
 	// One special case is the storage object at index 0, this is the one that changes are written into.
 	storages := []configdb.Storage{
 		configdb.UseJSONFile("testfiles/json/userconfig.json"),
-		configdb.UseJSONFile("testfiles/json/custom.json"),
+		configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
 		configdb.UseJSONFile("testfiles/json/default.json"),
 	}
 
@@ -34,7 +34,7 @@ func TestInit(t *testing.T) {
 func Create(t *testing.T) *configdb.Config {
 	storages := []configdb.Storage{
 		configdb.UseJSONFile("testfiles/json/userconfig.json"),
-		configdb.UseJSONFile("testfiles/json/custom.json"),
+		configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
 		configdb.UseJSONFile("testfiles/json/default.json"),
 	}
 

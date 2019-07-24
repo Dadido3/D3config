@@ -11,12 +11,14 @@ This is a small library to handle configuration files.
 Any configuration data is stored in a tree, that serves as intermediate layer between the config files on disk, and data structures in your software.
 
 This should make handling configuration data as simple as possible.
-Basically like a database you can write to or read from, without caring the way it is stored.
+Ideally it is as simple to use as a database.
+You can read/write any structure or data type, without caring when and how the data is stored somewhere.
 
 ## Features
 
 - Marshal & unmarshal any structures or types.
-- Multiple configuration files (e.g. default settings, user settings, ...) are merged into one tree.
+- Can handle multiple configuration files. They are merged into one tree priorized by order. (e.g. user settings, default, ...)
+- Has several storage types (JSON files, YAML files), and you can add your own storages.
 - Changes are saved to disk automatically, and changes on disk are loaded automatically.
 - Event system that signals changes to the tree.
 - Safe against power loss while writing files to disk.
@@ -30,7 +32,7 @@ If you encounter a bug, or some undocumented behavior, open an issue.
 ToDo:
 
 - [ ] `time.Time` and other objects that (un)marshal from/into text are not handled yet.
-- [ ] Add YAML support.
+- [ ] Fix Dropbox to cause files to not save, as it shortly prevents write access.
 
 ## Usage
 
@@ -42,7 +44,7 @@ ToDo:
 // One special case is the storage object at index 0, this is the one that changes are written into.
 storages := []configdb.Storage{
     configdb.UseJSONFile("testfiles/json/userconfig.json"),
-    configdb.UseJSONFile("testfiles/json/custom.json"),
+    configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
     configdb.UseJSONFile("testfiles/json/default.json"),
 }
 
