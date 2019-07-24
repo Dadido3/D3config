@@ -23,7 +23,7 @@ type JSONFile struct {
 }
 
 // UseJSONFile returns a JSONFile object.
-func UseJSONFile(path string) *JSONFile {
+func UseJSONFile(path string) Storage {
 	f := &JSONFile{
 		path:    path,
 		watcher: nil,
@@ -32,7 +32,8 @@ func UseJSONFile(path string) *JSONFile {
 	return f
 }
 
-func (f *JSONFile) read() (tree.Node, error) {
+// Read returns the tree representation of its content.
+func (f *JSONFile) Read() (tree.Node, error) {
 	if _, err := os.Stat(f.path); os.IsNotExist(err) {
 		return tree.Node{}, nil // Not existent file behaves like an empty tree
 	}
@@ -50,7 +51,8 @@ func (f *JSONFile) read() (tree.Node, error) {
 	return node, nil
 }
 
-func (f *JSONFile) write(t tree.Node) error {
+// Write takes a tree and stores it in some shape and form.
+func (f *JSONFile) Write(t tree.Node) error {
 	buf, err := json.MarshalIndent(t, "", "    ")
 	if err != nil {
 		return err
@@ -68,7 +70,11 @@ func (f *JSONFile) write(t tree.Node) error {
 	return nil
 }
 
-func (f *JSONFile) registerWatcher(changeChan chan<- struct{}) error {
+// RegisterWatcher takes a channel that is used to signal changes/modifications on the data.
+// Only one channel can be registered at a time.
+//
+// A nil value can be passed to unregister the listener.
+func (f *JSONFile) RegisterWatcher(changeChan chan<- struct{}) error {
 	// Close previous element, if there is one
 	if f.watcher != nil {
 		err := f.watcher.Close()

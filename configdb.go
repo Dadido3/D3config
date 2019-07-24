@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// TODO: Cache trees of files, so it operations don't need to go through the file system
+// TODO: Cache trees of storage objects, so it operations don't need to go through the file system
 
 package configdb
 
@@ -37,11 +37,11 @@ type eventUnregister struct {
 	resultChan chan<- struct{}
 }
 
-// Config stores any data structure as tree internally.
-// Create this by using NewConfig().
+// Config contains the hierarchical configuration data.
 //
+// Create this by using New().
 // Use the Set(), Reset() and Get() methods to interact with that tree.
-// Changes made to the config are immediately stored in the configuration file.
+// Changes made to the config are immediately stored in the the defined storage.
 type Config struct {
 	eventChan    chan interface{}
 	listenerChan chan interface{}
@@ -57,28 +57,30 @@ type listener struct {
 	callback func(c *Config, modified, added, removed []string)
 }
 
-// NewConfig returns a new Config object.
+// New returns a new Config object.
 //
-// It takes a list of File objects that can be created with UseJSONFile(path) and similar functions.
-// All files in the list are merged into one big configuration tree.
-// The priority of the files is descending, so elements/variables from the first files will overwrite the ones in files with lower priority.
+// It takes a list of Storage objects that can be created with UseJSONFile(path) and similar functions.
+// All storage objects in the list are merged into one big configuration tree.
+// The higher the index of an storage object in that list, the lower its content's priority.
+// Higher priority properties will overwrite lower priority ones.
 //
-// If a file is changed on disk, it is reloaded.
+// If a file is changed on disk, it is reloaded, and merged with all other files/storages automatically.
 // Changes in the configuration tree will be broadcasted to any listener.
 //
-// If any of these files couldn't be read, this function will return an error.
-func NewConfig(files []File) (*Config, error) {
+// If any of these storage objects couldn't be read from, this function will return an error.
+// On the other hand, if any storage object fails to read later, nothing will reload.
+func New(storages []Storage) (*Config, error) {
 	c := &Config{
 		eventChan:    make(chan interface{}),
 		listenerChan: make(chan interface{}),
 	}
 
-	readConfig := func(files []File) (tree.Node, error) {
+	readConfig := func(storages []Storage) (tree.Node, error) {
 		result := tree.Node{}
 
-		for i := len(files) - 1; i >= 0; i-- {
-			file := files[i]
-			t, err := file.read()
+		for i := len(storages) - 1; i >= 0; i-- {
+			storage := storages[i]
+			t, err := storage.Read()
 			if err != nil {
 				return nil, err
 			}
@@ -88,13 +90,13 @@ func NewConfig(files []File) (*Config, error) {
 		return result, nil
 	}
 
-	setObject := func(files []File, path string, obj interface{}) error {
-		if len(files) <= 0 {
-			return fmt.Errorf("There are no files to write to")
+	setObject := func(storages []Storage, path string, obj interface{}) error {
+		if len(storages) <= 0 {
+			return fmt.Errorf("There are no storages to write to")
 		}
-		file := files[0]
+		storage := storages[0]
 
-		t, err := file.read()
+		t, err := storage.Read()
 		if err != nil {
 			return err
 		}
@@ -103,20 +105,20 @@ func NewConfig(files []File) (*Config, error) {
 			return err
 		}
 
-		if err := file.write(t); err != nil {
+		if err := storage.Write(t); err != nil {
 			return err
 		}
 
 		return nil
 	}
 
-	resetObject := func(files []File, path string) error {
-		if len(files) <= 0 {
-			return fmt.Errorf("There are no files to write to")
+	resetObject := func(storages []Storage, path string) error {
+		if len(storages) <= 0 {
+			return fmt.Errorf("There are no storages to write to")
 		}
-		file := files[0]
+		storage := storages[0]
 
-		t, err := file.read()
+		t, err := storage.Read()
 		if err != nil {
 			return err
 		}
@@ -125,15 +127,15 @@ func NewConfig(files []File) (*Config, error) {
 			return err
 		}
 
-		if err := file.write(t); err != nil {
+		if err := storage.Write(t); err != nil {
 			return err
 		}
 
 		return nil
 	}
 
-	// Try to read files and build config tree
-	if tree, err := readConfig(files); err == nil {
+	// Try to read storages and build config tree
+	if tree, err := readConfig(storages); err == nil {
 		c.tree = tree // No need to lock mutex here, as nothing else can access the tree
 	} else {
 		return nil, err
@@ -147,18 +149,18 @@ func NewConfig(files []File) (*Config, error) {
 		defer c.waitGroup.Done()
 		defer close(treeChan)
 
-		changeChan := make(chan struct{}, 1) // Channel for file changes that trigger a reload of the config tree
+		changeChan := make(chan struct{}, 1) // Channel for storage changes that trigger a reload of the config tree
 		defer close(changeChan)
 
-		for _, file := range files {
-			file.registerWatcher(changeChan) // TODO: Handle error
-			defer file.registerWatcher(nil)
+		for _, storage := range storages {
+			storage.RegisterWatcher(changeChan) // TODO: Handle error
+			defer storage.RegisterWatcher(nil)
 		}
 
 		for {
 			select {
 			case <-changeChan:
-				tree, err := readConfig(files)
+				tree, err := readConfig(storages)
 				if err != nil {
 					// TODO: Handle error
 					log.Printf("ConfigDB: %v", err)
@@ -181,7 +183,7 @@ func NewConfig(files []File) (*Config, error) {
 				}
 				switch u := u.(type) {
 				case eventReset:
-					err := resetObject(files, u.path)
+					err := resetObject(storages, u.path)
 					u.resultChan <- err
 					// Write to changeChan in a non blocking way
 					/*select {
@@ -190,7 +192,7 @@ func NewConfig(files []File) (*Config, error) {
 					}*/
 
 				case eventSet:
-					err := setObject(files, u.path, u.object)
+					err := setObject(storages, u.path, u.object)
 					u.resultChan <- err
 					// Write to changeChan in a non blocking way
 					/*select {
@@ -287,18 +289,18 @@ func NewConfig(files []File) (*Config, error) {
 	return c, nil
 }
 
-// Register will add the given callback to the internal listener list.
+// RegisterCallback will add the given callback to the internal listener list.
 // A list of paths can be defined to ignore all events that are not inside the given paths.
 //
 // An integer is returned, that can be used to Unregister() the callback.
-func (c *Config) Register(paths []string, callback func(c *Config, modified, added, removed []string)) int {
+func (c *Config) RegisterCallback(paths []string, callback func(c *Config, modified, added, removed []string)) int {
 	resultChan := make(chan int)
 	c.listenerChan <- eventRegister{paths, callback, resultChan}
 	return <-resultChan
 }
 
-// Unregister removes a callback from the internal listener list.
-func (c *Config) Unregister(id int) {
+// UnregisterCallback removes a callback from the internal listener list.
+func (c *Config) UnregisterCallback(id int) {
 	resultChan := make(chan struct{})
 	c.listenerChan <- eventUnregister{id, resultChan}
 	<-resultChan
@@ -308,7 +310,7 @@ func (c *Config) Unregister(id int) {
 //
 // It's possible to modify the root node, with the path "", if the passed object is a map or a structure.
 //
-// Changes are written immediately to the configuration files.
+// Changes are written immediately to the to the storage object.
 func (c *Config) Set(path string, object interface{}) error {
 	resultChan := make(chan error)
 	c.eventChan <- eventSet{path, object, resultChan}
@@ -316,7 +318,7 @@ func (c *Config) Set(path string, object interface{}) error {
 }
 
 // Reset will remove the element at the given path.
-// If there are lower priority configuration files
+// Lower priority properties will be visible again, if available.
 func (c *Config) Reset(path string) error {
 	resultChan := make(chan error)
 	c.eventChan <- eventReset{path, resultChan}

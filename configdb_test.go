@@ -18,9 +18,9 @@ func TestSimple1(t *testing.T) {
 		F float64 `cdb:"someFloat"`
 	}{}
 
-	c, err := NewConfig([]File{UseJSONFile(filepath.Join(".", "testfiles", "json", "b.json"))})
+	c, err := New([]Storage{UseJSONFile(filepath.Join(".", "testfiles", "json", "b.json"))})
 	if err != nil {
-		t.Fatalf("NewConfig() failed: %v", err)
+		t.Fatalf("New() failed: %v", err)
 	}
 	defer c.Close()
 

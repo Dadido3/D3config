@@ -37,16 +37,16 @@ ToDo:
 ### Initialize
 
 ```go
-// The upper files have higher priority as the lower files.
-// So the properties/values in the upper files will overwrite the ones in the lower ones.
-// One special case is the file at index 0, this is the one that changes are written into.
-files := []configdb.File{
+// The upper storage objects have higher priority as the lower ones.
+// So the properties/values of the upper will overwrite the ones in the lower entries.
+// One special case is the storage object at index 0, this is the one that changes are written into.
+storages := []configdb.Storage{
     configdb.UseJSONFile("testfiles/json/userconfig.json"),
     configdb.UseJSONFile("testfiles/json/custom.json"),
     configdb.UseJSONFile("testfiles/json/default.json"),
 }
 
-c, err := configdb.NewConfig(files)
+c, err := configdb.New(storages)
 if err != nil {
     fmt.Fatal(err)
 }
@@ -201,13 +201,13 @@ Which will result in:
 }
 ```
 
-This can be used to overwrite and disable any defaults from other files.
+This can be used to overwrite and disable any defaults from other storage objects.
 
 ### Reset element
 
 ```go
 // Resets the element at the path ".todo".
-// This will restore any defaults, if there are any present in lower priority files.
+// This will restore any defaults, if there are any present in lower priority storage objects.
 err := c.Reset(".todo")
 if err != nil {
     t.Error(err)
@@ -226,18 +226,18 @@ if err != nil {
 ```go
 // Register callback to listen for events.
 // Once registered, the callback is called once to update the listener with the current state of the tree.
-id := c.Register(nil, func(c *configdb.Config, modified, added, removed []string) {
+id := c.RegisterCallback(nil, func(c *configdb.Config, modified, added, removed []string) {
     fmt.Printf("All m: %v, a: %v, r:%v\n", modified, added, removed)
 })
 // Use the result id to unregister later
-defer c.Unregister(id)
+defer c.UnregisterCallback(id)
 
 // Register callback to listen for events, but only for path ".something.to.watch"
-id = c.Register([]string{".something.to.watch"}, func(c *configdb.Config, modified, added, removed []string) {
+id = c.RegisterCallback([]string{".something.to.watch"}, func(c *configdb.Config, modified, added, removed []string) {
     fmt.Printf("Filtered m: %v, a: %v, r:%v\n", modified, added, removed)
 })
 // Use the result id to unregister later
-defer c.Unregister(id)
+defer c.UnregisterCallback(id)
 
 // Test the callback
 err := c.Set(".something.to.watch.for", 123)
@@ -258,13 +258,57 @@ All m: [], a: [.something .something.to .something.to.watch .something.to.watch.
 ```
 
 The parameters are lists of paths (strings) that were either modified, added or deleted from the tree.
+But in most cases these lists can be ignored.
+It's enough to set the path (filter) to the object you want to watch for.
 
 The first callback is just there to update the newly created listener with the current state of the tree.
+If there is data at the set path, there will always be one call right after registering the callback.
 
-With a filter, the callback is only called when the data changes.
-Therefore it is suitable for triggering a reconnect or similar actions when an event occurs.
+With a filter, the callback is only called when the watched data changes.
+Therefore the callback is suitable for triggering a reconnect or similar actions, as it is only called when necessary.
 
 Additionally it is made sure that the tree is in sync with the changes. It's safe to use `c.Get()` or even `c.Set()`/`c.Reset()` inside the callback.
+
+### Custom storage objects
+
+```go
+// Implement Storage interface.
+type CustomStorage struct {
+}
+
+func (f *CustomStorage) Read() (tree.Node, error) {
+    return tree.Node{
+        "SomethingPermanent": tree.Node{
+            "foo": tree.Number("123"),
+            "bar": tree.Number("-123.456"),
+        },
+    }, nil
+}
+
+func (f *CustomStorage) Write(t tree.Node) error {
+    return fmt.Errorf("Can't write into this storage object")
+}
+
+func (f *CustomStorage) RegisterWatcher(changeChan chan<- struct{}) error {
+    return nil
+}
+
+func TestCustomStorage(t *testing.T) {
+    // Use the custom made storage object along with others.
+    // Be aware, that if you have a non writable storage at the top, the tree can't be modified anymore.
+    storages := []configdb.Storage{
+        configdb.UseJSONFile("testfiles/json/userconfig.json"),
+        &CustomStorage{},
+        configdb.UseJSONFile("testfiles/json/default.json"),
+    }
+
+    c, err := configdb.New(storages)
+    if err != nil {
+        t.Fatal(err)
+    }
+    defer c.Close()
+}
+```
 
 ## FAQ
 
