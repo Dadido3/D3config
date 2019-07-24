@@ -24,7 +24,7 @@ func (n Node) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	new, err := anyToTree(reflect.ValueOf(root))
+	new, err := marshal(reflect.ValueOf(root))
 	if err != nil {
 		return err
 	}

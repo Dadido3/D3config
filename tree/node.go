@@ -63,7 +63,7 @@ func (n Node) Set(path string, obj interface{}) error {
 		return &ErrPathInvalid{path, "First path element has to be empty"}
 	}
 
-	newElement, err := anyToTree(reflect.ValueOf(obj))
+	newElement, err := marshal(reflect.ValueOf(obj))
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (n Node) Get(path string, obj interface{}) error {
 		}
 	}
 
-	return treeToAny(inter, reflect.ValueOf(obj))
+	return unmarshal(inter, reflect.ValueOf(obj))
 }
 
 // Remove removes the element and its children at the given path from the tree.

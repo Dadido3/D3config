@@ -3,11 +3,10 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// TODO: Handle time and other types (Use their Text(Un)Marshaler if possible)
-
 package tree
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -36,33 +35,35 @@ func getTags(f reflect.StructField) (name string, options map[string]interface{}
 	return
 }
 
-// anyToTree recursively converts any values to a valid tree.
+// marshal recursively converts any values to a valid tree.
 // Everything is copied, it will not contain references to the original values.
-func anyToTree(v reflect.Value) (interface{}, error) {
+func marshal(v reflect.Value) (interface{}, error) {
 
-	if !v.IsValid() {
+	if !v.IsValid() || v.Kind() == reflect.Ptr && v.IsNil() {
 		return nil, nil
 	}
 
-	switch v := v.Interface().(type) {
+	switch i := v.Interface().(type) {
 	case Number, json.Number:
-		return NumberCreate(v)
+		return NumberCreate(i)
+	case encoding.TextMarshaler:
+		text, err := i.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+		return string(text), nil
+	case nil:
+		return nil, nil
 	}
 
 	t := v.Type()
 
 	switch v.Kind() {
 	case reflect.Ptr:
-		if v.IsNil() {
-			return nil, nil
-		}
-		return anyToTree(v.Elem())
+		return marshal(v.Elem())
 
 	case reflect.Interface:
-		if v.IsNil() {
-			return nil, nil
-		}
-		return anyToTree(v.Elem())
+		return marshal(v.Elem())
 
 	case reflect.Struct:
 		node := Node{}
@@ -71,7 +72,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 			name, options := getTags(ft)
 			var err error
 			if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
-				node[name], err = anyToTree(fv)
+				node[name], err = marshal(fv)
 				if err != nil {
 					return nil, err
 				}
@@ -91,7 +92,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 			}
 			key := e.String()
 			var err error
-			node[key], err = anyToTree(v.MapIndex(e))
+			node[key], err = marshal(v.MapIndex(e))
 			if err != nil {
 				return nil, err
 			}
@@ -103,7 +104,7 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 		for i := 0; i < v.Len(); i++ {
 			index := v.Index(i)
 			var err error
-			slice[i], err = anyToTree(index)
+			slice[i], err = marshal(index)
 			if err != nil {
 				return nil, err
 			}
@@ -124,22 +125,37 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 	return nil, &ErrUnexpectedType{"", fmt.Sprintf("%v", t), ""}
 }
 
-// treeToAny recursively converts any tree into a given structure/value.
+// unmarshal recursively converts any tree into a given structure/value.
 //
 // Everything is copied, it will not contain references to the tree values.
 // In case of an error, nothing will be written.
-func treeToAny(tree interface{}, v reflect.Value) error {
+func unmarshal(tree interface{}, v reflect.Value) error {
 	t := v.Type()
 
 	if v.Kind() != reflect.Ptr && !v.CanSet() {
 		return &ErrCannotModify{v.String(), v.Kind().String()}
 	}
 
-	switch v.Kind() {
-	case reflect.Interface:
+	switch i := v.Interface().(type) {
+	case encoding.TextUnmarshaler:
+		text, ok := tree.(string)
+		if !ok {
+			return &ErrUnexpectedType{"", fmt.Sprintf("%T", tree), "string"}
+		}
+		err := i.UnmarshalText([]byte(text))
+		if err != nil {
+			return err
+		}
+		return nil
+	case nil:
 		copy := recursiveCopy(tree)
 		v.Set(reflect.ValueOf(copy))
 		return nil
+	}
+
+	switch v.Kind() {
+	case reflect.Interface:
+		return unmarshal(tree, v.Elem())
 
 	case reflect.Ptr:
 		if tree == nil { // If element in tree is nil, write nil pointer
@@ -151,13 +167,13 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 				return &ErrCannotModify{v.String(), v.Kind().String()}
 			}
 			new := reflect.New(t.Elem())
-			if err := treeToAny(tree, new.Elem()); err != nil {
+			if err := unmarshal(tree, new.Elem()); err != nil {
 				return err
 			}
 			v.Set(new)
 			return nil
 		}
-		return treeToAny(tree, v.Elem())
+		return unmarshal(tree, v.Elem())
 
 	case reflect.Struct:
 		if node, ok := tree.(Node); ok {
@@ -167,7 +183,7 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 				name, options := getTags(ft)
 				if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
 					if subTree, ok := node[name]; ok {
-						err := treeToAny(subTree, fv)
+						err := unmarshal(subTree, fv)
 						if err != nil {
 							return err
 						}
@@ -186,7 +202,7 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 			rMap := reflect.MakeMap(t)
 			for k, tv := range node {
 				rv := reflect.New(t.Elem()).Elem()
-				err := treeToAny(tv, rv)
+				err := unmarshal(tv, rv)
 				if err != nil {
 					return err
 				}
@@ -200,7 +216,7 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 		if slice, ok := tree.([]interface{}); ok {
 			rSlice := reflect.MakeSlice(t, len(slice), cap(slice))
 			for i, tv := range slice {
-				err := treeToAny(tv, rSlice.Index(i))
+				err := unmarshal(tv, rSlice.Index(i))
 				if err != nil {
 					return err
 				}
@@ -216,7 +232,7 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 				if i >= rArray.Len() {
 					break
 				}
-				err := treeToAny(tv, rArray.Index(i))
+				err := unmarshal(tv, rArray.Index(i))
 				if err != nil {
 					return err
 				}

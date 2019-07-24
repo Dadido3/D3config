@@ -107,6 +107,15 @@ func TestReadAny(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Printf("%#v\n", m)
+
+	// The lib supports all objects that support text (un)marshaller interface
+	var ti time.Time
+
+	err = c.Get(".back.toTheFuture", &ti)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("%v\n", ti)
 }
 
 func TestWriteValue(t *testing.T) {
@@ -117,8 +126,16 @@ func TestWriteValue(t *testing.T) {
 
 	b := true
 
-	// Pass an object to be written at the path ".todo.WriteCode"
+	// Pass an boolean to be written at the path ".todo.WriteCode"
 	err := c.Set(".todo.WriteCode", b)
+	if err != nil {
+		t.Error(err)
+	}
+
+	ti := time.Date(2019, 7, 24, 14, 46, 24, 124, time.UTC)
+
+	// Pass time object to be written at the path ".time.WriteCodeAt"
+	err = c.Set(".time.WriteCodeAt", ti)
 	if err != nil {
 		t.Error(err)
 	}

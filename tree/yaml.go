@@ -20,7 +20,7 @@ func (n Node) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 		return err
 	}
 
-	new, err := anyToTree(reflect.ValueOf(root))
+	new, err := marshal(reflect.ValueOf(root))
 	if err != nil {
 		return err
 	}

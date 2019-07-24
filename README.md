@@ -17,7 +17,8 @@ You can read/write any structure or data type, without caring when and how the d
 ## Features
 
 - Marshal & unmarshal any structures or types.
-- Can handle multiple configuration files. They are merged into one tree priorized by order. (e.g. user settings, default, ...)
+- Support of encoding.TextMarshaler and encoding.TextUnmarshaler interfaces.
+- Can handle multiple configuration files. They are merged into one tree prioritized by order. (e.g. user settings, default, ...)
 - Has several storage types (JSON files, YAML files), and you can add your own storages.
 - Changes are saved to disk automatically, and changes on disk are loaded automatically.
 - Event system that signals changes to the tree.
@@ -31,7 +32,6 @@ If you encounter a bug, or some undocumented behavior, open an issue.
 
 ToDo:
 
-- [ ] `time.Time` and other objects that (un)marshal from/into text are not handled yet.
 - [ ] Fix Dropbox to cause files to not save, as it shortly prevents write access.
 
 ## Usage
@@ -124,6 +124,15 @@ if err != nil {
     t.Error(err)
 }
 fmt.Printf("%#v\n", m)
+
+// The lib supports all objects that support text (un)marshaller interface
+var ti time.Time
+
+err = c.Get(".back.toTheFuture", &ti)
+if err != nil {
+    t.Error(err)
+}
+fmt.Printf("%v\n", ti)
 ```
 
 Will result in:
@@ -131,15 +140,24 @@ Will result in:
 ```go
 []string{"Sam Sung", "Saad Maan", "Chris P. Bacon"}
 map[string]interface {}{"height":"654.321", "names":[]interface {}{"Sam Sung", "Saad Maan", "Chris P. Bacon"}, "width":"123.456"}
+1985-10-26 01:21:00 +0000 UTC
 ```
 
 ### Write value
 
 ```go
-var b bool
+b := true
 
-// Pass an object to be written at the path ".todo.WriteCode"
+// Pass a boolean to be written at the path ".todo.WriteCode"
 err := c.Set(".todo.WriteCode", b)
+if err != nil {
+    t.Error(err)
+}
+
+ti := time.Date(2019, 7, 24, 14, 46, 24, 124, time.UTC)
+
+// Pass time object to be written at the path ".time.WriteCodeAt"
+err = c.Set(".time.WriteCodeAt", ti)
 if err != nil {
     t.Error(err)
 }
@@ -154,8 +172,11 @@ If config was created with `testfiles/json/userconfig.json` being the first file
 ```json
 {
     "todo": {
-        "WriteCode": false
-    }
+        "WriteCode": true
+    },
+    "time": {
+        "WriteCodeAt": "2019-07-24T14:46:24.000000124Z"
+    },
 }
 ```
 
@@ -173,7 +194,7 @@ if err != nil {
 }
 ```
 
-Which will result in the file `testfiles/json/userconfig.json` to look like: (Assuming `"WriteCode": true` was written before)
+Which will result in the file `testfiles/json/userconfig.json` to look like: (Assuming that `"WriteCode": true` was already present)
 
 ```json
 {
@@ -314,11 +335,11 @@ func TestCustomStorage(t *testing.T) {
 
 ## FAQ
 
-### What are valid element names?
+**What are valid element names?**
 
 Any character except period `.` is allowed. Also empty names are valid too.
 
-### How to address elements of an array or slice with a path?
+**How to address elements of an array or slice with a path?**
 
 You can't. Paths can only address map elements or structure fields.
 But you can use `Get()` to read any slice or array.
@@ -326,7 +347,7 @@ But you can use `Get()` to read any slice or array.
 If you need to register a callback on something inside an array or slice, you have to point on the array/slice itself.
 E.g. `.someField.slice` will also trigger an event when some element or value several levels deep inside of that slice is modified.
 
-### Is it really not possible to address elements inside arrays or slices?
+**Is it really not possible to address elements inside arrays or slices?**
 
 With a trick it is:
 
