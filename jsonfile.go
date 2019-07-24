@@ -70,7 +70,7 @@ func (f *JSONFile) Write(t tree.Node) error {
 	return nil
 }
 
-// RegisterWatcher takes a channel that is used to signal changes/modifications on the data.
+// RegisterWatcher takes a channel that is used to signal changes/modifications of the data.
 // Only one channel can be registered at a time.
 //
 // A nil value can be passed to unregister the listener.

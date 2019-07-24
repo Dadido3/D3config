@@ -7,8 +7,9 @@
 
 # ConfigDB [![Build Status](https://travis-ci.com/Dadido3/configdb.svg?branch=master)](https://travis-ci.com/Dadido3/configdb)
 
-This is a small library to handle configuration files.
-Any configuration data is stored in a tree, that serves as intermediate layer between the config files on disk, and data structures in your software.
+This is a small library to handle hierarchical configuration.
+Any properties/values are stored in a tree internally.
+This tree serves as intermediate layer between config files on disk, and data structures in your software.
 
 This should make handling configuration data as simple as possible.
 Ideally it is as simple to use as a database.
@@ -19,7 +20,7 @@ You can read/write any structure or data type, without caring when and how the d
 - Marshal & unmarshal any structures or types.
 - Support of encoding.TextMarshaler and encoding.TextUnmarshaler interfaces.
 - Can handle multiple configuration files. They are merged into one tree prioritized by order. (e.g. user settings, default, ...)
-- Has several storage types (JSON files, YAML files), and you can add your own storages.
+- Has several storage types (JSON files, YAML files), and you can add your own storage types.
 - Changes are saved to disk automatically, and changes on disk are loaded automatically.
 - Event system that signals changes to the tree.
 - Safe against power loss while writing files to disk.
