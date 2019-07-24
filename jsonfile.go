@@ -33,6 +33,10 @@ func UseJSONFile(path string) *JSONFile {
 }
 
 func (f *JSONFile) read() (tree.Node, error) {
+	if _, err := os.Stat(f.path); os.IsNotExist(err) {
+		return tree.Node{}, nil // Not existent file behaves like an empty tree
+	}
+
 	buf, err := ioutil.ReadFile(f.path)
 	if err != nil {
 		return nil, fmt.Errorf("Reading file %v failed: %v", f.path, err)
@@ -64,7 +68,7 @@ func (f *JSONFile) write(t tree.Node) error {
 	return nil
 }
 
-func (f *JSONFile) registerWatcher(change chan<- struct{}) error {
+func (f *JSONFile) registerWatcher(changeChan chan<- struct{}) error {
 	// Close previous element, if there is one
 	if f.watcher != nil {
 		err := f.watcher.Close()
@@ -75,7 +79,7 @@ func (f *JSONFile) registerWatcher(change chan<- struct{}) error {
 	}
 
 	// If there is no channel, just do nothing
-	if change == nil {
+	if changeChan == nil {
 		return nil
 	}
 
@@ -91,7 +95,11 @@ func (f *JSONFile) registerWatcher(change chan<- struct{}) error {
 				if !ok {
 					return
 				}
-				change <- struct{}{}
+				// Write to changeChan in a non blocking way
+				select {
+				case changeChan <- struct{}{}:
+				default:
+				}
 			case _, ok := <-w.Errors:
 				if !ok {
 					return

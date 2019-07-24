@@ -40,6 +40,10 @@ func getTags(f reflect.StructField) (name string, options map[string]interface{}
 // Everything is copied, it will not contain references to the original values.
 func anyToTree(v reflect.Value) (interface{}, error) {
 
+	if !v.IsValid() {
+		return nil, nil
+	}
+
 	switch v := v.Interface().(type) {
 	case Number, json.Number:
 		return NumberCreate(v)
@@ -48,7 +52,13 @@ func anyToTree(v reflect.Value) (interface{}, error) {
 	t := v.Type()
 
 	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Ptr:
+		if v.IsNil() {
+			return nil, nil
+		}
+		return anyToTree(v.Elem())
+
+	case reflect.Interface:
 		if v.IsNil() {
 			return nil, nil
 		}
@@ -123,6 +133,11 @@ func treeToAny(tree interface{}, v reflect.Value) error {
 	}
 
 	switch v.Kind() {
+	case reflect.Interface:
+		copy := recursiveCopy(tree)
+		v.Set(reflect.ValueOf(copy))
+		return nil
+
 	case reflect.Ptr:
 		if tree == nil { // If element in tree is nil, write nil pointer
 			v.Set(reflect.Zero(t))

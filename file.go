@@ -11,5 +11,5 @@ import "github.com/Dadido3/configdb/tree"
 type File interface {
 	read() (tree.Node, error)
 	write(t tree.Node) error
-	registerWatcher(change chan<- struct{}) error
+	registerWatcher(changeChan chan<- struct{}) error
 }

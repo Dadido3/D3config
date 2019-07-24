@@ -1,8 +1,10 @@
 {
     "cSpell.words": [
+        "Unmarshalling",
         "configdb",
         "fsnotify",
         "unexported",
+        "unmarshal",
         "unregister",
         "vogel"
     ],

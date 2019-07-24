@@ -1,0 +1,16 @@
+{
+    "box": {
+        "names": [
+            "Sam Sung",
+            "Saad Maan",
+            "Chris P. Bacon"
+        ]
+    },
+    "slicedNodes": [
+        {
+            "something": 123
+        },
+        {},
+        {}
+    ]
+}

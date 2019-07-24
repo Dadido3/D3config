@@ -123,7 +123,11 @@ func (n Node) Remove(path string) error {
 		return &ErrPathInvalid{path, "First path element has to be empty"}
 	}
 	if len(pathElements) < 2 {
-		return &ErrCannotModify{fmt.Sprintf("%v", n), fmt.Sprintf("%T", n)}
+		// Special case, remove all children
+		for k := range n {
+			delete(n, k)
+		}
+		return nil
 	}
 	lastElement := pathElements[len(pathElements)-1]
 	pathElements = pathElements[1 : len(pathElements)-1] // Omit first and last element
@@ -274,35 +278,34 @@ func (n Node) Merge(new Node) {
 
 // Copy returns a copy of itself.
 func (n Node) Copy() Node {
-	var recursive func(v interface{}) interface{}
-	recursive = func(v interface{}) interface{} {
-		switch v := v.(type) {
-		case Node:
-			node := Node{}
-			for k, child := range v {
-				node[k] = recursive(child)
-			}
-			return node
+	return recursiveCopy(n).(Node) // Something went really wrong if the result is not a Node
+}
 
-		case bool, string, Number:
-			return v
-
-		case nil:
-			return nil
-
-		case []interface{}:
-			slice := []interface{}{}
-			for _, child := range v {
-				slice = append(slice, recursive(child))
-			}
-			return slice
-
+func recursiveCopy(v interface{}) interface{} {
+	switch v := v.(type) {
+	case Node:
+		node := Node{}
+		for k, child := range v {
+			node[k] = recursiveCopy(child)
 		}
+		return node
 
-		panic(fmt.Sprintf("Got invalid element %v of type %T in tree", v, v))
+	case bool, string, Number:
+		return v
+
+	case nil:
+		return nil
+
+	case []interface{}:
+		slice := []interface{}{}
+		for _, child := range v {
+			slice = append(slice, recursiveCopy(child))
+		}
+		return slice
+
 	}
 
-	return recursive(n).(Node) // Something went really wrong if the result is not a Node
+	panic(fmt.Sprintf("Got invalid element %v of type %T in tree", v, v))
 }
 
 // Check returns an error when a tree contains any malformed or illegal elements.

@@ -147,27 +147,21 @@ func NewConfig(files []File) (*Config, error) {
 		defer c.waitGroup.Done()
 		defer close(treeChan)
 
-		changeChan := make(chan struct{}) // Channel for file changes that trigger a reload of the config tree
+		changeChan := make(chan struct{}, 1) // Channel for file changes that trigger a reload of the config tree
 		defer close(changeChan)
 
 		for _, file := range files {
 			file.registerWatcher(changeChan) // TODO: Handle error
 			defer file.registerWatcher(nil)
 		}
-		defer func() {
-			go func() {
-				for range changeChan {
-					// When closing, read all changeChan events
-				}
-			}()
-		}()
 
 		for {
 			select {
 			case <-changeChan:
 				tree, err := readConfig(files)
-				if err == nil {
+				if err != nil {
 					// TODO: Handle error
+					log.Printf("ConfigDB: %v", err)
 					continue
 				}
 				// Write tree into tree channel, or replace the queued element if the goroutine is busy. This is non blocking
@@ -189,10 +183,20 @@ func NewConfig(files []File) (*Config, error) {
 				case eventReset:
 					err := resetObject(files, u.path)
 					u.resultChan <- err
+					// Write to changeChan in a non blocking way
+					/*select {
+					case changeChan <- struct{}{}:
+					default:
+					}*/
 
 				case eventSet:
 					err := setObject(files, u.path, u.object)
 					u.resultChan <- err
+					// Write to changeChan in a non blocking way
+					/*select {
+					case changeChan <- struct{}{}:
+					default:
+					}*/
 
 				default:
 					log.Panicf("Got invalid element %v of type %T in event channel", u, u)
