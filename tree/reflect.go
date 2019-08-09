@@ -130,10 +130,31 @@ func marshal(v reflect.Value) (interface{}, error) {
 // Everything is copied, it will not contain references to the tree values.
 // In case of an error, nothing will be written.
 func unmarshal(tree interface{}, v reflect.Value) error {
+	if !v.IsValid() {
+		return nil
+	}
+
 	t := v.Type()
 
 	if v.Kind() != reflect.Ptr && !v.CanSet() {
 		return &ErrCannotModify{v.String(), v.Kind().String()}
+	}
+
+	// TODO: Reduce duplicate code
+
+	if v.CanAddr() && v.Addr().Elem().CanSet() {
+		switch i := v.Addr().Interface().(type) {
+		case encoding.TextUnmarshaler:
+			text, ok := tree.(string)
+			if !ok {
+				return &ErrUnexpectedType{"", fmt.Sprintf("%T", tree), "string"}
+			}
+			err := i.UnmarshalText([]byte(text))
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 	}
 
 	switch i := v.Interface().(type) {
@@ -147,18 +168,19 @@ func unmarshal(tree interface{}, v reflect.Value) error {
 			return err
 		}
 		return nil
-	case nil:
-		copy := recursiveCopy(tree)
-		v.Set(reflect.ValueOf(copy))
-		return nil
 	}
 
 	switch v.Kind() {
 	case reflect.Interface:
+		if v.NumMethod() == 0 { // TODO: Fix interface handling
+			copy := recursiveCopy(tree)
+			v.Set(reflect.ValueOf(copy))
+			return nil
+		}
 		return unmarshal(tree, v.Elem())
 
 	case reflect.Ptr:
-		if tree == nil { // If element in tree is nil, write nil pointer
+		if tree == nil && v.CanSet() { // If element in tree is nil, write nil pointer
 			v.Set(reflect.Zero(t))
 			return nil
 		}

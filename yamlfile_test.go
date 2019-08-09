@@ -44,7 +44,7 @@ var treeA = tree.Node{
 	},
 }
 
-func TestYAML(t *testing.T) {
+func TestYAMLRoundtrip(t *testing.T) {
 	c, err := New([]Storage{UseYAMLFile(filepath.Join(".", "testfiles", "yaml", "a.yml"))})
 	if err != nil {
 		t.Fatalf("New() failed: %v", err)
@@ -64,7 +64,7 @@ func TestYAML(t *testing.T) {
 		t.Errorf("Illegal element in tree: %v", err)
 	}
 	if !reflect.DeepEqual(treeA, readBack) {
-		t.Errorf("got %#v, want %#v", treeA, readBack)
+		t.Errorf("got %#v, want %#v", readBack, treeA)
 	}
 
 }

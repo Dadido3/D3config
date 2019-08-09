@@ -40,12 +40,12 @@ func (f *JSONFile) Read() (tree.Node, error) {
 
 	buf, err := ioutil.ReadFile(f.path)
 	if err != nil {
-		return nil, fmt.Errorf("Reading file %v failed: %v", f.path, err)
+		return nil, fmt.Errorf("Reading JSON file %v failed: %v", f.path, err)
 	}
 
 	node := tree.Node{}
 	if err := json.Unmarshal(buf, &node); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unmarshalling %v failed: %v", f.path, err)
 	}
 
 	return node, nil
@@ -55,7 +55,7 @@ func (f *JSONFile) Read() (tree.Node, error) {
 func (f *JSONFile) Write(t tree.Node) error {
 	buf, err := json.MarshalIndent(t, "", "    ")
 	if err != nil {
-		return err
+		return fmt.Errorf("Marshalling into %v failed: %v", f.path, err)
 	}
 
 	tempPath := f.path + ".tmp"

@@ -40,12 +40,12 @@ func (f *YAMLFile) Read() (tree.Node, error) {
 
 	buf, err := ioutil.ReadFile(f.path)
 	if err != nil {
-		return nil, fmt.Errorf("Reading file %v failed: %v", f.path, err)
+		return nil, fmt.Errorf("Reading YAML file %v failed: %v", f.path, err)
 	}
 
 	node := tree.Node{}
 	if err := yaml.Unmarshal(buf, &node); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unmarshalling %v failed: %v", f.path, err)
 	}
 
 	return node, nil
@@ -55,7 +55,7 @@ func (f *YAMLFile) Read() (tree.Node, error) {
 func (f *YAMLFile) Write(t tree.Node) error {
 	buf, err := yaml.Marshal(t)
 	if err != nil {
-		return err
+		return fmt.Errorf("Marshalling into %v failed: %v", f.path, err)
 	}
 
 	tempPath := f.path + ".tmp"
