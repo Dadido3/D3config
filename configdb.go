@@ -287,6 +287,17 @@ func New(storages []Storage) (*Config, error) {
 	return c, nil
 }
 
+// NewOrPanic returns a new Config object.
+// It's similar to New(), but it panics instead of returning an error.
+func NewOrPanic(storages []Storage) *Config {
+	res, err := New(storages)
+	if err != nil {
+		panic(err)
+	}
+
+	return res
+}
+
 // RegisterCallback will add the given callback to the internal listener list.
 // A list of paths can be defined to ignore all events that are not inside the given paths.
 //
