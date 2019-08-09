@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// TODO: Cache trees of storage objects, so it operations don't need to go through the file system
-
 package configdb
 
 import (

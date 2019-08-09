@@ -34,6 +34,9 @@ If you encounter a bug, or some undocumented behavior, open an issue.
 ToDo:
 
 - [ ] Fix Dropbox to cause files to not save, as it shortly prevents write access.
+- [ ] Cache trees of storage objects, don't read from disk when writing.
+- [ ] Ignore change events caused by writing into storage objects.
+- [ ] Handle []byte in a compact manner.
 
 ## Usage
 
