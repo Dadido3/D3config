@@ -2,6 +2,7 @@
 
 > :warning: This library was formerly called `configdb`.
 > You may need to do the following adjustments:
+>
 > - Change your import paths and `go.mod` entry from `github.com/Dadido3/configdb` to `github.com/Dadido3/D3config`.
 > - Change any package name from `configdb` to `config`.
 > - Change any struct tag key from `cdb` to `conf`.
@@ -30,13 +31,6 @@ You can implement your own storage type by implementing the [Storage interface](
 
 The library is feature complete, but as it is really new and not much tested (Beside the unit tests) i can't guarantee that everything will work correctly.
 If you encounter a bug, or some undocumented behavior, open an issue.
-
-TODO:
-
-- [ ] Fix Dropbox to cause files to not save, as it shortly prevents write access.
-- [ ] Cache trees of storage objects, don't read from disk when writing.
-- [ ] Ignore change events caused by writing into storage objects.
-- [ ] Handle []byte in a compact manner.
 
 ## Usage
 
