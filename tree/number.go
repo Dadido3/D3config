@@ -1,4 +1,4 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -68,12 +68,12 @@ func (n Number) String() (string, error) {
 	return string(n), nil
 }
 
-// MarshalJSON writes the raw string of the Number type
+// MarshalJSON writes the raw string of the Number type.
 func (n Number) MarshalJSON() ([]byte, error) {
 	return []byte(n), nil
 }
 
-// MarshalYAML writes the raw string of the Number type
+// MarshalYAML writes the raw string of the Number type.
 func (n Number) MarshalYAML() (interface{}, error) {
 	yn := &yaml.Node{
 		Kind:  yaml.ScalarNode,

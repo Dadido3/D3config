@@ -28,7 +28,7 @@ func UseDummyStorage(initPath string, initData interface{}) Storage {
 
 	if initData != nil {
 		if err := f.tree.Set(initPath, initData); err != nil {
-			log.Panicf("Failed to initialize the dummy storage: %v", err)
+			log.Panicf("Failed to initialize the dummy storage: %v.", err)
 		}
 	}
 

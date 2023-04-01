@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "cmpopts",
         "configdb",
         "dadido",
         "errorf",
@@ -7,8 +8,10 @@
         "maan",
         "printf",
         "println",
+        "readback",
         "saad",
         "struct",
+        "Substruct",
         "testfiles",
         "unexported",
         "unmarshal",

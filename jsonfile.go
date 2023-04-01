@@ -35,17 +35,17 @@ func UseJSONFile(path string) Storage {
 // Read returns the tree representation of its content.
 func (f *JSONFile) Read() (tree.Node, error) {
 	if _, err := os.Stat(f.path); os.IsNotExist(err) {
-		return tree.Node{}, nil // Not existent file behaves like an empty tree
+		return tree.Node{}, nil // Not existent file behaves like an empty tree.
 	}
 
 	buf, err := ioutil.ReadFile(f.path)
 	if err != nil {
-		return nil, fmt.Errorf("Reading JSON file %v failed: %v", f.path, err)
+		return nil, fmt.Errorf("reading JSON file %v failed: %w", f.path, err)
 	}
 
 	node := tree.Node{}
 	if err := json.Unmarshal(buf, &node); err != nil {
-		return nil, fmt.Errorf("Unmarshalling %v failed: %v", f.path, err)
+		return nil, fmt.Errorf("unmarshalling %v failed: %w", f.path, err)
 	}
 
 	return node, nil
@@ -55,16 +55,16 @@ func (f *JSONFile) Read() (tree.Node, error) {
 func (f *JSONFile) Write(t tree.Node) error {
 	buf, err := json.MarshalIndent(t, "", "    ")
 	if err != nil {
-		return fmt.Errorf("Marshalling into %v failed: %v", f.path, err)
+		return fmt.Errorf("marshalling into %v failed: %w", f.path, err)
 	}
 
 	tempPath := f.path + ".tmp"
 	if err := ioutil.WriteFile(tempPath, buf, 0644); err != nil {
-		return fmt.Errorf("Writing file %v failed: %v", tempPath, err)
+		return fmt.Errorf("writing file %v failed: %w", tempPath, err)
 	}
 
 	if err := os.Rename(tempPath, f.path); err != nil {
-		return fmt.Errorf("Renaming file %v to %v failed: %v", tempPath, f.path, err)
+		return fmt.Errorf("renaming file %v to %v failed: %w", tempPath, f.path, err)
 	}
 
 	return nil
@@ -75,7 +75,7 @@ func (f *JSONFile) Write(t tree.Node) error {
 //
 // A nil value can be passed to unregister the listener.
 func (f *JSONFile) RegisterWatcher(changeChan chan<- struct{}) error {
-	// Close previous element, if there is one
+	// Close previous element, if there is one.
 	if f.watcher != nil {
 		err := f.watcher.Close()
 		if err != nil {
@@ -84,7 +84,7 @@ func (f *JSONFile) RegisterWatcher(changeChan chan<- struct{}) error {
 		f.watcher = nil
 	}
 
-	// If there is no channel, just do nothing
+	// If there is no channel, just do nothing.
 	if changeChan == nil {
 		return nil
 	}
@@ -101,7 +101,7 @@ func (f *JSONFile) RegisterWatcher(changeChan chan<- struct{}) error {
 				if !ok {
 					return
 				}
-				// Write to changeChan in a non blocking way
+				// Write to changeChan in a non blocking way.
 				select {
 				case changeChan <- struct{}{}:
 				default:

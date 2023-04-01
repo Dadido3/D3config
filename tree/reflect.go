@@ -1,4 +1,4 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -22,10 +22,10 @@ func getTags(f reflect.StructField) (name string, options map[string]interface{}
 		return
 	}
 
-	splitted := strings.Split(tags, ",")
-	name = splitted[0]
+	split := strings.Split(tags, ",")
+	name = split[0]
 
-	for _, v := range splitted[1:len(splitted)] {
+	for _, v := range split[1:] {
 		switch v {
 		case "omit":
 			options[v] = true
@@ -71,7 +71,7 @@ func marshal(v reflect.Value) (interface{}, error) {
 			ft, fv := t.Field(i), v.Field(i)
 			name, options := getTags(ft)
 			var err error
-			if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
+			if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set.
 				node[name], err = marshal(fv)
 				if err != nil {
 					return nil, err
@@ -83,7 +83,7 @@ func marshal(v reflect.Value) (interface{}, error) {
 	case reflect.Map:
 		node := Node{}
 		for _, e := range v.MapKeys() {
-			// Only allow strings as keys, because JSON and some other formats wont allow anything else
+			// Only allow strings as keys, because JSON and some other formats wont allow anything else.
 			for e.Kind() == reflect.Interface || e.Kind() == reflect.Ptr {
 				e = e.Elem()
 			}
@@ -180,7 +180,7 @@ func unmarshal(tree interface{}, v reflect.Value) error {
 		return unmarshal(tree, v.Elem())
 
 	case reflect.Ptr:
-		if tree == nil && v.CanSet() { // If element in tree is nil, write nil pointer
+		if tree == nil && v.CanSet() { // If element in tree is nil, write nil pointer.
 			v.Set(reflect.Zero(t))
 			return nil
 		}
@@ -203,7 +203,7 @@ func unmarshal(tree interface{}, v reflect.Value) error {
 			for i := 0; i < t.NumField(); i++ {
 				ft, fv := t.Field(i), rStruct.Field(i)
 				name, options := getTags(ft)
-				if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set
+				if ft.PkgPath == "" && !(options["omit"] == true) { // Ignore unexported fields, or fields with "omit" set.
 					if subTree, ok := node[name]; ok {
 						err := unmarshal(subTree, fv)
 						if err != nil {

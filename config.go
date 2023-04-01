@@ -44,7 +44,7 @@ type Config struct {
 	eventChan    chan interface{}
 	listenerChan chan interface{}
 
-	tree      tree.Node // Tree is only modified by the "Tree update handler" goroutine, to prevent deadlocks and out of sync data
+	tree      tree.Node // Tree is only modified by the "Tree update handler" goroutine, to prevent deadlocks and out of sync data.
 	treeMutex sync.RWMutex
 
 	waitGroup sync.WaitGroup
@@ -90,7 +90,7 @@ func New(storages []Storage) (*Config, error) {
 
 	setObject := func(storages []Storage, path string, obj interface{}) error {
 		if len(storages) <= 0 {
-			return fmt.Errorf("There are no storages to write to")
+			return fmt.Errorf("there are no storage objects to write to")
 		}
 		storage := storages[0]
 
@@ -112,7 +112,7 @@ func New(storages []Storage) (*Config, error) {
 
 	resetObject := func(storages []Storage, path string) error {
 		if len(storages) <= 0 {
-			return fmt.Errorf("There are no storages to write to")
+			return fmt.Errorf("there are no storage objects to write to")
 		}
 		storage := storages[0]
 
@@ -132,22 +132,22 @@ func New(storages []Storage) (*Config, error) {
 		return nil
 	}
 
-	// Try to read storages and build config tree
+	// Try to read storages and build config tree.
 	if tree, err := readConfig(storages); err == nil {
-		c.tree = tree // No need to lock mutex here, as nothing else can access the tree
+		c.tree = tree // No need to lock mutex here, as nothing else can access the tree.
 	} else {
 		return nil, err
 	}
 
-	treeChan := make(chan tree.Node, 1) // New (already merged) trees are put here to be compared and distributed to listeners
+	treeChan := make(chan tree.Node, 1) // New (already merged) trees are put here to be compared and distributed to listeners.
 
-	// Event handler goroutine
+	// Event handler goroutine.
 	c.waitGroup.Add(1)
 	go func() {
 		defer c.waitGroup.Done()
 		defer close(treeChan)
 
-		changeChan := make(chan struct{}, 1) // Channel for storage changes that trigger a reload of the config tree
+		changeChan := make(chan struct{}, 1) // Channel for storage changes that trigger a reload of the config tree.
 		defer close(changeChan)
 
 		for _, storage := range storages {
@@ -164,7 +164,7 @@ func New(storages []Storage) (*Config, error) {
 					log.Printf("D3config: %v", err)
 					continue
 				}
-				// Write tree into tree channel, or replace the queued element if the goroutine is busy. This is non blocking
+				// Write tree into tree channel, or replace the queued element if the goroutine is busy. This is non blocking.
 				select {
 				case treeChan <- tree:
 				default:
@@ -183,7 +183,7 @@ func New(storages []Storage) (*Config, error) {
 				case eventReset:
 					err := resetObject(storages, u.path)
 					u.resultChan <- err
-					// Write to changeChan in a non blocking way
+					// Write to changeChan in a non blocking way.
 					/*select {
 					case changeChan <- struct{}{}:
 					default:
@@ -192,14 +192,14 @@ func New(storages []Storage) (*Config, error) {
 				case eventSet:
 					err := setObject(storages, u.path, u.object)
 					u.resultChan <- err
-					// Write to changeChan in a non blocking way
+					// Write to changeChan in a non blocking way.
 					/*select {
 					case changeChan <- struct{}{}:
 					default:
 					}*/
 
 				default:
-					log.Panicf("Got invalid element %v of type %T in event channel", u, u)
+					log.Panicf("Got invalid element %v of type %T in event channel.", u, u)
 				}
 			}
 		}
@@ -229,12 +229,12 @@ func New(storages []Storage) (*Config, error) {
 		}
 	}
 
-	// Tree update handler goroutine (Also distributes tree events to listeners)
+	// Tree update handler goroutine. (Also distributes tree events to listeners)
 	c.waitGroup.Add(1)
 	go func() {
 		defer c.waitGroup.Done()
 
-		listeners := make(map[int]listener) // List of registered listeners
+		listeners := make(map[int]listener) // List of registered listeners.
 		listenersCounter := 0
 
 		for {
@@ -244,7 +244,7 @@ func New(storages []Storage) (*Config, error) {
 					return
 				}
 
-				modified, added, removed := c.tree.Compare(t) // No mutex needed, as the tree is only modified in this goroutine
+				modified, added, removed := c.tree.Compare(t) // No mutex needed, as the tree is only modified in this goroutine.
 				c.treeMutex.Lock()
 				c.tree = t
 				c.treeMutex.Unlock()
@@ -264,20 +264,20 @@ func New(storages []Storage) (*Config, error) {
 				case eventRegister:
 					l := listener{e.paths, e.callback}
 					if len(l.paths) == 0 {
-						l.paths = []string{""} // Add at least one empty path that fits all, if there are not paths defined
+						l.paths = []string{""} // Add at least one empty path that fits all, if there are not paths defined.
 					}
 					listeners[listenersCounter] = l
 					e.resultChan <- listenersCounter
 					listenersCounter++
-					modified, added, removed := tree.Node{}.Compare(c.tree) // Compare empty tree with current one
-					sendChanges(l, modified, added, removed)                // No mutex needed, as the tree is only modified in this goroutine
+					modified, added, removed := tree.Node{}.Compare(c.tree) // Compare empty tree with current one.
+					sendChanges(l, modified, added, removed)                // No mutex needed, as the tree is only modified in this goroutine.
 
 				case eventUnregister:
 					delete(listeners, e.id)
 					e.resultChan <- struct{}{}
 
 				default:
-					log.Panicf("Got invalid element %v of type %T in listener channel", e, e)
+					log.Panicf("Got invalid element %v of type %T in listener channel.", e, e)
 
 				}
 			}
@@ -342,7 +342,7 @@ func (c *Config) Get(path string, object interface{}) error {
 	return c.tree.Get(path, object)
 }
 
-// Close will free all ressources/watchers.
+// Close will free all resources/watchers.
 func (c *Config) Close() {
 	close(c.eventChan)
 	c.waitGroup.Wait()

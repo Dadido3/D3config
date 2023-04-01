@@ -1,4 +1,4 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -30,20 +30,20 @@ func (n Node) CreatePath(path string) (Node, error) {
 	if elements[0] != "" {
 		return nil, &ErrPathInvalid{path, "First path element has to be empty"}
 	}
-	elements = elements[1:len(elements)] // Omit first element
+	elements = elements[1:] // Omit first element.
 
 	node := n
 	for _, e := range elements {
 		child, ok := node[e]
 		if !ok {
-			// Create child if it doesn't exist
+			// Create child if it doesn't exist.
 			tempNode := Node{}
 			node[e] = tempNode
 			node = tempNode
 		} else {
 			tempNode, ok := child.(Node)
 			if !ok {
-				// Child is not a node, so overwrite it
+				// Child is not a node, so overwrite it.
 				tempNode = Node{}
 				node[e] = tempNode
 			}
@@ -69,7 +69,7 @@ func (n Node) Set(path string, obj interface{}) error {
 	}
 
 	if len(pathElements) > 1 {
-		// Path points on some subelement
+		// Path points on some sub element.
 		lastElement := pathElements[len(pathElements)-1]
 		node, err := n.CreatePath(PathJoin(pathElements[:len(pathElements)-1]...))
 		if err != nil {
@@ -77,7 +77,7 @@ func (n Node) Set(path string, obj interface{}) error {
 		}
 		node[lastElement] = newElement
 	} else {
-		// Special case when the path points on this node
+		// Special case when the path points on this node.
 		newNode, ok := newElement.(Node)
 		if !ok {
 			return &ErrCannotModify{fmt.Sprintf("%v", n), fmt.Sprintf("%T", n)}
@@ -97,18 +97,18 @@ func (n Node) Get(path string, obj interface{}) error {
 	if elements[0] != "" {
 		return &ErrPathInvalid{path, "First path element has to be empty"}
 	}
-	elements = elements[1:len(elements)] // Omit first element
+	elements = elements[1:] // Omit first element.
 
 	inter := interface{}(n)
 	for _, e := range elements {
 		var ok bool
 		node, ok := inter.(Node)
 		if !ok {
-			return &ErrPathInsideValue{path} // Path points inside a value
+			return &ErrPathInsideValue{path} // Path points inside a value.
 		}
 		inter, ok = node[e]
 		if !ok {
-			return &ErrElementNotFound{path} // Element at path doesn't exist
+			return &ErrElementNotFound{path} // Element at path doesn't exist.
 		}
 	}
 
@@ -123,25 +123,25 @@ func (n Node) Remove(path string) error {
 		return &ErrPathInvalid{path, "First path element has to be empty"}
 	}
 	if len(pathElements) < 2 {
-		// Special case, remove all children
+		// Special case, remove all children.
 		for k := range n {
 			delete(n, k)
 		}
 		return nil
 	}
 	lastElement := pathElements[len(pathElements)-1]
-	pathElements = pathElements[1 : len(pathElements)-1] // Omit first and last element
+	pathElements = pathElements[1 : len(pathElements)-1] // Omit first and last element.
 
 	node := n
 	for _, e := range pathElements {
 		child, ok := node[e]
 		if !ok {
-			return &ErrElementNotFound{path} // Element at path doesn't exist
+			return &ErrElementNotFound{path} // Element at path doesn't exist.
 		}
 
 		node, ok = child.(Node)
 		if !ok {
-			return &ErrPathInsideValue{path} // Path points inside a value
+			return &ErrPathInsideValue{path} // Path points inside a value.
 		}
 	}
 
@@ -193,7 +193,7 @@ func (n Node) Compare(new Node) (modified, added, removed []string) {
 }
 
 func (n Node) compare(new Node, prefix string) (modified, added, removed []string) {
-	// Look for modified or removed elements
+	// Look for modified or removed elements.
 	for k, v := range n {
 		vNew, foundNew := new[k]
 
@@ -202,26 +202,26 @@ func (n Node) compare(new Node, prefix string) (modified, added, removed []strin
 			nodeB, bIsNode := vNew.(Node)
 			if aIsNode && bIsNode {
 				// If both elements are nodes, check recursively.
-				mod, add, rem := nodeA.compare(nodeB, prefix+k+PathSeparator) // Prefix is not really a path, as it can have a path separator at the end
+				mod, add, rem := nodeA.compare(nodeB, prefix+k+PathSeparator) // Prefix is not really a path, as it can have a path separator at the end.
 				modified, added, removed = append(modified, mod...), append(added, add...), append(removed, rem...)
 			} else if aIsNode {
-				// If only a is a node, it got overwritten by a value
+				// If only a is a node, it got overwritten by a value.
 				modified = append(modified, prefix+k)
 				_, _, rem := nodeA.compare(Node{}, prefix+k+PathSeparator)
 				removed = append(removed, rem...)
 			} else if bIsNode {
-				// If only b is a node, it replaced a value
+				// If only b is a node, it replaced a value.
 				modified = append(modified, prefix+k)
 				_, add, _ := Node{}.compare(nodeB, prefix+k+PathSeparator)
 				added = append(added, add...)
 			} else if !cmp.Equal(v, vNew) {
-				// If the two values are not equal
+				// If the two values are not equal.
 				modified = append(modified, prefix+k)
 			}
 			continue
 		}
 
-		// Not found, add to removed list
+		// Not found, add to removed list.
 		removed = append(removed, prefix+k)
 		if nodeA, ok := v.(Node); ok {
 			_, _, rem := nodeA.compare(Node{}, prefix+k+PathSeparator)
@@ -229,7 +229,7 @@ func (n Node) compare(new Node, prefix string) (modified, added, removed []strin
 		}
 	}
 
-	// Look for added elements
+	// Look for added elements.
 	for k, vNew := range new {
 		_, found := n[k]
 
@@ -248,10 +248,10 @@ func (n Node) compare(new Node, prefix string) (modified, added, removed []strin
 // Merge merges this tree with the new one.
 //
 // The following rules apply:
-// - If both elements are nodes, their children are merged
-// - Otherwise, the element of the new tree is written
-// - If there is some element in the old, but not in the new tree, the old one is kept
-// - If there is some element in the new, but not in the old tree, the new one is written
+// - If both elements are nodes, their children are merged.
+// - Otherwise, the element of the new tree is written.
+// - If there is some element in the old, but not in the new tree, the old one is kept.
+// - If there is some element in the new, but not in the old tree, the new one is written.
 //
 // Slices will not be merged, but new ones will overwrite old ones.
 func (n Node) Merge(new Node) {
@@ -265,20 +265,20 @@ func (n Node) Merge(new Node) {
 				// If both elements are nodes, merge recursively.
 				nodeA.Merge(nodeB)
 			} else {
-				// If only one or none of the elements is a node, replace the old with the new one
+				// If only one or none of the elements is a node, replace the old with the new one.
 				n[k] = vNew
 			}
 			continue
 		}
 
-		// Element not found in old tree
+		// Element not found in old tree.
 		n[k] = vNew
 	}
 }
 
 // Copy returns a copy of itself.
 func (n Node) Copy() Node {
-	return recursiveCopy(n).(Node) // Something went really wrong if the result is not a Node
+	return recursiveCopy(n).(Node) // Something went really wrong if the result is not a Node.
 }
 
 func recursiveCopy(v interface{}) interface{} {
@@ -332,7 +332,7 @@ func (n Node) Check() error {
 
 		case []interface{}:
 			for i, child := range v {
-				err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for slice elements, not really a valid path
+				err := recursive(child, PathJoin(path, fmt.Sprint(i))) // Pseudo path for slice elements, not really a valid path.
 				if err != nil {
 					return err
 				}
