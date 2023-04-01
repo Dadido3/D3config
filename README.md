@@ -1,4 +1,4 @@
-# D3config [![Build Status](https://travis-ci.com/Dadido3/D3config.svg?branch=master)](https://travis-ci.com/Dadido3/D3config)
+# D3config [![Test](https://github.com/Dadido3/D3config/actions/workflows/build-test.yml/badge.svg)](https://github.com/Dadido3/D3config/actions/workflows/build-test.yml)
 
 > :warning: This library was formerly called `configdb`.
 > You may need to do the following adjustments:
