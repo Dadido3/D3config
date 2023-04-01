@@ -1,6 +1,5 @@
 {
     "cSpell.words": [
-        "Unmarshalling",
         "configdb",
         "dadido",
         "errorf",
@@ -14,6 +13,7 @@
         "unexported",
         "unmarshal",
         "unmarshaler",
+        "Unmarshalling",
         "unregister",
         "userconfig",
         "vogel"

@@ -1,44 +1,44 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package configdb_test
+package config_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/Dadido3/configdb"
-	"github.com/Dadido3/configdb/tree"
+	config "github.com/Dadido3/D3config"
+	"github.com/Dadido3/D3config/tree"
 )
 
 func TestInit(t *testing.T) {
 	// The upper storage objects have higher priority as the lower ones.
 	// So the properties/values of the upper will overwrite the ones in the lower entries.
 	// One special case is the storage object at index 0, this is the one that changes are written into.
-	storages := []configdb.Storage{
-		configdb.UseJSONFile("testfiles/json/userconfig.json"),
-		configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
-		configdb.UseJSONFile("testfiles/json/default.json"),
+	storages := []config.Storage{
+		config.UseJSONFile("testfiles/json/userconfig.json"),
+		config.UseYAMLFile("testfiles/yaml/custom.yml"),
+		config.UseJSONFile("testfiles/json/default.json"),
 	}
 
-	c, err := configdb.New(storages)
+	c, err := config.New(storages)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
 }
 
-func Create(t *testing.T) *configdb.Config {
-	storages := []configdb.Storage{
-		configdb.UseJSONFile("testfiles/json/userconfig.json"),
-		configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
-		configdb.UseJSONFile("testfiles/json/default.json"),
+func Create(t *testing.T) *config.Config {
+	storages := []config.Storage{
+		config.UseJSONFile("testfiles/json/userconfig.json"),
+		config.UseYAMLFile("testfiles/yaml/custom.yml"),
+		config.UseJSONFile("testfiles/json/default.json"),
 	}
 
-	c, err := configdb.New(storages)
+	c, err := config.New(storages)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,14 +199,14 @@ func TestRegister(t *testing.T) {
 
 	// Register callback to listen for events.
 	// Once registered, the callback is called once to update the listener with the current state of the tree.
-	id := c.RegisterCallback(nil, func(c *configdb.Config, modified, added, removed []string) {
+	id := c.RegisterCallback(nil, func(c *config.Config, modified, added, removed []string) {
 		fmt.Printf("All m: %v, a: %v, r:%v\n", modified, added, removed)
 	})
 	// Use the result id to unregister later
 	defer c.UnregisterCallback(id)
 
 	// Register callback to listen for events, but only for path ".something.to.watch"
-	id = c.RegisterCallback([]string{".something.to.watch"}, func(c *configdb.Config, modified, added, removed []string) {
+	id = c.RegisterCallback([]string{".something.to.watch"}, func(c *config.Config, modified, added, removed []string) {
 		fmt.Printf("Filtered m: %v, a: %v, r:%v\n", modified, added, removed)
 	})
 	// Use the result id to unregister later
@@ -266,13 +266,13 @@ func (f *CustomStorage) RegisterWatcher(changeChan chan<- struct{}) error {
 func TestCustomStorage(t *testing.T) {
 	// Use the custom made storage object along with others.
 	// Be aware, that if you have a non writable storage at the top, the tree can't be modified anymore.
-	storages := []configdb.Storage{
-		configdb.UseJSONFile("testfiles/json/userconfig.json"),
+	storages := []config.Storage{
+		config.UseJSONFile("testfiles/json/userconfig.json"),
 		&CustomStorage{},
-		configdb.UseJSONFile("testfiles/json/default.json"),
+		config.UseJSONFile("testfiles/json/default.json"),
 	}
 
-	c, err := configdb.New(storages)
+	c, err := config.New(storages)
 	if err != nil {
 		t.Fatal(err)
 	}

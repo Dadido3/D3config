@@ -1,19 +1,14 @@
-<!--
- Copyright (c) 2019 David Vogel
- 
- This software is released under the MIT License.
- https://opensource.org/licenses/MIT
--->
+# D3config [![Build Status](https://travis-ci.com/Dadido3/D3config.svg?branch=master)](https://travis-ci.com/Dadido3/D3config)
 
-# ConfigDB [![Build Status](https://travis-ci.com/Dadido3/configdb.svg?branch=master)](https://travis-ci.com/Dadido3/configdb)
+> :warning: This library was formerly called `configdb`.  
+> You may need to update your import paths and `go.mod` files from `github.com/Dadido3/configdb` to `github.com/Dadido3/D3config`.  
+> Also, the package name changed from `configdb` to `config`.
 
-This is a small library to handle hierarchical configuration.
-Any properties/values are stored in a tree internally.
-This tree serves as intermediate layer between config files on disk, and data structures in your software.
+This is a small library to handle hierarchical configuration values.
+The main principle is that configuration values are loaded from storage objects (E.g. YAML files. See [Storage interface](storage.go) if you want to implement custom sources.).
+If there are multiple storage objects, their value hierarchies are merged into one tree prioritized by the order of your storage sources.
 
-This should make handling configuration data as simple as possible.
-Ideally it is as simple to use as a database.
-You can read/write any structure or data type, without caring when and how the data is stored somewhere.
+Configuration values can be modified, either temporarily until the next program start, or permanently. In this case, the library will write the changes back to the first storage object that you have defined.
 
 ## Features
 
@@ -22,7 +17,7 @@ You can read/write any structure or data type, without caring when and how the d
 - Can handle multiple configuration files. They are merged into one tree prioritized by order. (e.g. user settings, default, ...)
 - Has several storage types (JSON files, YAML files), and you can add your own storage types.
 - Changes are saved to disk automatically, and changes on disk are loaded automatically.
-- Event system that signals changes to the tree.
+- Listen for changes to the tree or child elements of the tree by defining a callback function.
 - Safe against power loss while writing files to disk.
 - Thread-safe and deadlock proof by design.
 
@@ -31,7 +26,7 @@ You can read/write any structure or data type, without caring when and how the d
 The library is feature complete, but as it is really new and not much tested (Beside the unit tests) i can't guarantee that everything will work correctly.
 If you encounter a bug, or some undocumented behavior, open an issue.
 
-ToDo:
+TODO:
 
 - [ ] Fix Dropbox to cause files to not save, as it shortly prevents write access.
 - [ ] Cache trees of storage objects, don't read from disk when writing.
@@ -40,24 +35,31 @@ ToDo:
 
 ## Usage
 
+To add this library to your `go.mod` file use:
+
+`go get github.com/Dadido3/D3config`
+
 ### Initialize
 
 ```go
 // The upper storage objects have higher priority as the lower ones.
 // So the properties/values of the upper will overwrite the ones in the lower entries.
 // One special case is the storage object at index 0, this is the one that changes are written into.
-storages := []configdb.Storage{
-    configdb.UseJSONFile("testfiles/json/userconfig.json"),
-    configdb.UseYAMLFile("testfiles/yaml/custom.yml"),
-    configdb.UseJSONFile("testfiles/json/default.json"),
+storages := []config.Storage{
+    config.UseJSONFile("testfiles/json/userconfig.json"),
+    config.UseYAMLFile("testfiles/yaml/custom.yml"),
+    config.UseJSONFile("testfiles/json/default.json"),
 }
 
-c, err := configdb.New(storages)
+c, err := config.New(storages)
 if err != nil {
     fmt.Fatal(err)
 }
 defer c.Close()
 ```
+
+Alternatively, you can define `config.UseDummyStorage("", nil)` as the first storage source.
+In this case any modification of the values are only temporary and will be forgotten when the program ends.
 
 ### Read value
 
@@ -253,14 +255,14 @@ if err != nil {
 ```go
 // Register callback to listen for events.
 // Once registered, the callback is called once to update the listener with the current state of the tree.
-id := c.RegisterCallback(nil, func(c *configdb.Config, modified, added, removed []string) {
+id := c.RegisterCallback(nil, func(c *config.Config, modified, added, removed []string) {
     fmt.Printf("All m: %v, a: %v, r:%v\n", modified, added, removed)
 })
 // Use the result id to unregister later
 defer c.UnregisterCallback(id)
 
 // Register callback to listen for events, but only for path ".something.to.watch"
-id = c.RegisterCallback([]string{".something.to.watch"}, func(c *configdb.Config, modified, added, removed []string) {
+id = c.RegisterCallback([]string{".something.to.watch"}, func(c *config.Config, modified, added, removed []string) {
     fmt.Printf("Filtered m: %v, a: %v, r:%v\n", modified, added, removed)
 })
 // Use the result id to unregister later
@@ -323,13 +325,13 @@ func (f *CustomStorage) RegisterWatcher(changeChan chan<- struct{}) error {
 func TestCustomStorage(t *testing.T) {
     // Use the custom made storage object along with others.
     // Be aware, that if you have a non writable storage at the top, the tree can't be modified anymore.
-    storages := []configdb.Storage{
-        configdb.UseJSONFile("testfiles/json/userconfig.json"),
+    storages := []config.Storage{
+        config.UseJSONFile("testfiles/json/userconfig.json"),
         &CustomStorage{},
-        configdb.UseJSONFile("testfiles/json/default.json"),
+        config.UseJSONFile("testfiles/json/default.json"),
     }
 
-    c, err := configdb.New(storages)
+    c, err := config.New(storages)
     if err != nil {
         t.Fatal(err)
     }
@@ -355,7 +357,7 @@ E.g. `.someField.slice` will also trigger an event when some element or value se
 
 With a trick it is:
 
-- Import `"github.com/Dadido3/configdb/tree"`
+- Import `"github.com/Dadido3/D3config/tree"`
 - Use the following snippet:
 
 ```go

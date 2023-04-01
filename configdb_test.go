@@ -1,9 +1,9 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package configdb
+package config
 
 import (
 	"path/filepath"

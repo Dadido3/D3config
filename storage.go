@@ -1,11 +1,11 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package configdb
+package config
 
-import "github.com/Dadido3/configdb/tree"
+import "github.com/Dadido3/D3config/tree"
 
 // Storage interface provides arbitrary ways to store/read hierarchical data.
 type Storage interface {

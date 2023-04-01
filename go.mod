@@ -1,4 +1,4 @@
-module github.com/Dadido3/configdb
+module github.com/Dadido3/D3config
 
 go 1.12
 

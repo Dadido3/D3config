@@ -1,16 +1,16 @@
-// Copyright (c) 2019 David Vogel
+// Copyright (c) 2019-2023 David Vogel
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package configdb
+package config
 
 import (
 	"fmt"
 	"log"
 	"sync"
 
-	"github.com/Dadido3/configdb/tree"
+	"github.com/Dadido3/D3config/tree"
 )
 
 type eventReset struct {
@@ -161,7 +161,7 @@ func New(storages []Storage) (*Config, error) {
 				tree, err := readConfig(storages)
 				if err != nil {
 					// TODO: Handle error
-					log.Printf("ConfigDB: %v", err)
+					log.Printf("D3config: %v", err)
 					continue
 				}
 				// Write tree into tree channel, or replace the queued element if the goroutine is busy. This is non blocking
