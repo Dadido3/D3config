@@ -1,9 +1,11 @@
 # File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
-
-# Created by https://www.gitignore.io/api/visualstudiocode,windows,go
-# Edit at https://www.gitignore.io/?templates=visualstudiocode,windows,go
+# Created by https://www.toptal.com/developers/gitignore/api/windows,visualstudiocode,go
+# Edit at https://www.toptal.com/developers/gitignore?templates=windows,visualstudiocode,go
 
 ### Go ###
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -20,9 +22,8 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-### Go Patch ###
-/vendor/
-/Godeps/
+# Go workspace file
+go.work
 
 ### VisualStudioCode ###
 .vscode/*
@@ -30,10 +31,18 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
 
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
 .history
+.ionide
 
 ### Windows ###
 # Windows thumbnail cache files
@@ -61,7 +70,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.gitignore.io/api/visualstudiocode,windows,go
+# End of https://www.toptal.com/developers/gitignore/api/windows,visualstudiocode,go
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 
