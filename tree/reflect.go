@@ -17,7 +17,14 @@ func getTags(f reflect.StructField) (name string, options map[string]interface{}
 	name = f.Name
 	options = map[string]interface{}{}
 
-	tags, ok := f.Tag.Lookup("cdb")
+	// Check for the newer conf tag.
+	tags, ok := f.Tag.Lookup("conf")
+
+	// If there is no conf tag, check for the old cdb tag.
+	if !ok {
+		tags, ok = f.Tag.Lookup("cdb")
+	}
+
 	if !ok {
 		return
 	}

@@ -12,7 +12,7 @@ import (
 
 func TestSimple1(t *testing.T) {
 	testStruct := struct {
-		F float64 `cdb:"someFloat"`
+		F float64 `conf:"someFloat"`
 	}{}
 
 	c, err := New([]Storage{UseJSONFile(filepath.Join(".", "testfiles", "json", "b.json"))})

@@ -1,25 +1,30 @@
 # D3config [![Build Status](https://travis-ci.com/Dadido3/D3config.svg?branch=master)](https://travis-ci.com/Dadido3/D3config)
 
-> :warning: This library was formerly called `configdb`.  
-> You may need to update your import paths and `go.mod` files from `github.com/Dadido3/configdb` to `github.com/Dadido3/D3config`.  
-> Also, the package name changed from `configdb` to `config`.
+> :warning: This library was formerly called `configdb`.
+> You may need to do the following adjustments:
+> - Change your import paths and `go.mod` entry from `github.com/Dadido3/configdb` to `github.com/Dadido3/D3config`.
+> - Change any package name from `configdb` to `config`.
+> - Change any struct tag key from `cdb` to `conf`.
 
-This is a small library to handle hierarchical configuration values.
-The main principle is that configuration values are loaded from storage objects (E.g. YAML files. See [Storage interface](storage.go) if you want to implement custom sources.).
-If there are multiple storage objects, their value hierarchies are merged into one tree prioritized by the order of your storage sources.
+This is a small library for handling hierarchical configuration values.
+The main principle is that the configuration values are loaded from storage objects, like YAML or JSON files.
+If there are multiple storage objects, their hierarchies are merged into a single tree that you can easily read from and written to.
 
-Configuration values can be modified, either temporarily until the next program start, or permanently. In this case, the library will write the changes back to the first storage object that you have defined.
+Configuration values can be modified at runtime, either from the outside by editing the source files, or from within an application.
+In the latter case, the library writes the changes back to the first storage object you defined.
+
+You can implement your own storage type by implementing the [Storage interface](storage.go).
 
 ## Features
 
 - Marshal & unmarshal any structures or types.
 - Support of encoding.TextMarshaler and encoding.TextUnmarshaler interfaces.
 - Can handle multiple configuration files. They are merged into one tree prioritized by order. (e.g. user settings, default, ...)
-- Has several storage types (JSON files, YAML files), and you can add your own storage types.
+- Has several storage types (JSON files, YAML files), and you can implement your own storage types.
 - Changes are saved to disk automatically, and changes on disk are loaded automatically.
-- Listen for changes to the tree or child elements of the tree by defining a callback function.
+- Listeners for tree/value changes can be registered.
 - Safe against power loss while writing files to disk.
-- Thread-safe and deadlock proof by design.
+- Thread-safe by design.
 
 ## Current state
 
@@ -89,9 +94,9 @@ This will write `123.456` into `f`, with json data like:
 ```go
 // You can use tags to change the names, or exclude fields with "omit".
 var str struct {
-    Width     float64 `cdb:"width"`
-    Height    float64 `cdb:"height"`
-    PlsIgnore string  `cdb:",omit"`
+    Width     float64 `conf:"width"`
+    Height    float64 `conf:"height"`
+    PlsIgnore string  `conf:",omit"`
 }
 
 // Pass a pointer to any object you want to read from the internal tree at the given path ".box".
@@ -261,7 +266,8 @@ id := c.RegisterCallback(nil, func(c *config.Config, modified, added, removed []
 // Use the result id to unregister later.
 defer c.UnregisterCallback(id)
 
-// Register callback to listen for events, but only for path ".something.to.watch".
+// Register callback to listen for events, but only inside the path ".something.to.watch".
+// This includes modifications to ".something.to.watch" itself.
 id = c.RegisterCallback([]string{".something.to.watch"}, func(c *config.Config, modified, added, removed []string) {
     fmt.Printf("Filtered m: %v, a: %v, r:%v\n", modified, added, removed)
 })
@@ -269,7 +275,7 @@ id = c.RegisterCallback([]string{".something.to.watch"}, func(c *config.Config, 
 defer c.UnregisterCallback(id)
 
 // Test the callback.
-err := c.Set(".something.to.watch.for", 123)
+err := c.Set(".something.to.watch.for", 125)
 if err != nil {
     t.Error(err)
 }
@@ -281,20 +287,20 @@ time.Sleep(100 * time.Millisecond)
 The output could look like this:
 
 ``` text
-All m: [], a: [.box .box.width .box.height .box.names], r:[]
+All m: [], a: [.back .back.toTheFuture .box .box.width .box.height .box.names .slicedNodes .something .something.to .something.to.watch .something.to.watch.for], r:[]
 Filtered m: [], a: [.something.to.watch .something.to.watch.for], r:[]
-All m: [], a: [.something .something.to .something.to.watch .something.to.watch.for], r:[]
+Filtered m: [.something.to.watch.for], a: [], r:[]
+All m: [.something.to.watch.for], a: [], r:[]
 ```
 
-The parameters are lists of paths (strings) that were either modified, added or deleted from the tree.
-But in most cases these lists can be ignored.
-It's enough to set the path (filter) to the object you want to watch for.
+When you register a new listener, there will be one initial call to your callback.
 
-The first callback is just there to update the newly created listener with the current state of the tree.
-If there is data at the set path, there will always be one call right after registering the callback.
+The parameters are lists of paths (strings) that have either been modified, added or deleted from the tree.
+In most cases these lists can be ignored and are only needed for more advanced tasks.
 
-With a filter, the callback is only called when the watched data changes.
-Therefore the callback is suitable for triggering a reconnect or similar actions, as it is only called when necessary.
+A whitelist of paths can be defined to filter events.
+This way only paths that are included in the whitelist (or that are child elements of whitelisted paths) will trigger a callback.
+You can use this to restart a web server on configuration changes.
 
 Additionally it is made sure that the tree is in sync with the changes. It's safe to use `c.Get()` or even `c.Set()`/`c.Reset()` inside the callback.
 

@@ -69,9 +69,9 @@ func TestReadStructure(t *testing.T) {
 
 	// You can use tags to change the names, or exclude fields with "omit".
 	var str struct {
-		Width     float64 `cdb:"width"`
-		Height    float64 `cdb:"height"`
-		PlsIgnore string  `cdb:",omit"`
+		Width     float64 `conf:"width"`
+		Height    float64 `conf:"height"`
+		PlsIgnore string  `conf:",omit"`
 	}
 
 	// Pass a pointer to any object you want to read from the internal tree at the given path ".box".
@@ -205,7 +205,8 @@ func TestRegister(t *testing.T) {
 	// Use the result id to unregister later.
 	defer c.UnregisterCallback(id)
 
-	// Register callback to listen for events, but only for path ".something.to.watch".
+	// Register callback to listen for events, but only inside the path ".something.to.watch".
+	// This includes modifications to ".something.to.watch" itself.
 	id = c.RegisterCallback([]string{".something.to.watch"}, func(c *config.Config, modified, added, removed []string) {
 		fmt.Printf("Filtered m: %v, a: %v, r:%v\n", modified, added, removed)
 	})
@@ -213,7 +214,7 @@ func TestRegister(t *testing.T) {
 	defer c.UnregisterCallback(id)
 
 	// Test the callback.
-	err := c.Set(".something.to.watch.for", 123)
+	err := c.Set(".something.to.watch.for", 125)
 	if err != nil {
 		t.Error(err)
 	}
