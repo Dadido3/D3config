@@ -9,7 +9,7 @@
 
 This is a small library for handling hierarchical configuration values.
 The main principle is that the configuration values are loaded from storage objects, like YAML or JSON files.
-If there are multiple storage objects, their hierarchies are merged into a single tree that you can easily read from and written to.
+If there are multiple storage objects, their hierarchies are merged into a single tree that you can easily read from and write to.
 
 Configuration values can be modified at runtime, either from the outside by editing the source files, or from within an application.
 In the latter case, the library writes the changes back to the first storage object you defined.
